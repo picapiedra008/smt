@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "28445900517",
+    "project_id": "foodpoint-71b1d",
+    "storage_bucket": "foodpoint-71b1d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:28445900517:android:a5a224ff865c99586c9e0c",
+        "android_client_info": {
+          "package_name": "com.example.food_point"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBO3j8ycYuqyeMcLcr_JZLXtnOi5oMrqtY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
