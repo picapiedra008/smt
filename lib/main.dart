@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'widgets/restaurant_form_page.dart';
-
+import 'widgets/catalogo_platos_page.dart';
 
 void main() async{
   WidgetsFlutterBinding.ensureInitialized();
@@ -128,12 +128,11 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
         body: TabBarView(
-          children: [
-            // show connection status based on Firebase initialization
-            Center(child: Text(widget.firebaseConnected ? 'conectado' : 'desconectado')),
-            const RestaurantFormPage(),
-          ],
-        ),
+             children: [
+         const CatalogoPlatosPage(), // aquí va el catálogo
+         const RestaurantFormPage(),
+  ],
+      ),
       ),
     );
   }
