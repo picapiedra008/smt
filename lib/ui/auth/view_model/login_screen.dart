@@ -1,49 +1,55 @@
 import 'package:flutter/material.dart';
+import 'package:food_point/ui/auth/view_model/registro_screen.dart';
 
 class LoginScreen extends StatelessWidget {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  LoginScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context); // 👈 obtiene colores del tema actual
+
     return Scaffold(
       body: Center(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 30, vertical: 50),
+          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Icono superior
               Container(
-                padding: EdgeInsets.all(20),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.orange,
+                  color: theme.colorScheme.primary,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.restaurant_menu,
-                  color: Colors.white,
+                  color: theme.colorScheme.onPrimary,
                   size: 40,
                 ),
               ),
-              SizedBox(height: 15),
+              const SizedBox(height: 15),
 
               // Título y subtítulo
               Text(
                 'Sabores de Cochabamba',
-                style: TextStyle(
-                  fontSize: 22,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  color: theme.colorScheme.primary,
                   fontWeight: FontWeight.bold,
-                  color: Colors.orange,
                 ),
               ),
-              SizedBox(height: 5),
+              const SizedBox(height: 5),
               Text(
                 'Descubre la gastronomía tradicional del valle',
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onBackground.withOpacity(0.7),
+                ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
 
               // Card con campos y botones
               Card(
@@ -51,18 +57,18 @@ class LoginScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15),
                 ),
+                color: theme.colorScheme.surface,
                 child: Padding(
-                  padding: EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     children: [
                       Text(
                         'Iniciar Sesión',
-                        style: TextStyle(
-                          fontSize: 18,
+                        style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
                       // Email
                       TextField(
@@ -70,12 +76,9 @@ class LoginScreen extends StatelessWidget {
                         decoration: InputDecoration(
                           labelText: 'Correo Electrónico',
                           hintText: 'tu@email.com',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
                         ),
                       ),
-                      SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
                       // Contraseña
                       TextField(
@@ -84,32 +87,25 @@ class LoginScreen extends StatelessWidget {
                         decoration: InputDecoration(
                           labelText: 'Contraseña',
                           hintText: 'Tu contraseña',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(10),
+                          suffixIcon: Icon(
+                            Icons.visibility,
+                            color: theme.colorScheme.primary,
                           ),
-                          suffixIcon: Icon(Icons.visibility),
                         ),
                       ),
-                      SizedBox(height: 20),
+                      const SizedBox(height: 20),
 
                       // Botón Iniciar Sesión
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.orange,
-                            padding: EdgeInsets.symmetric(vertical: 15),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
                           onPressed: () {
                             // Acción de login
                           },
-                          child: Text('Iniciar Sesión'),
+                          child: const Text('Iniciar Sesión'),
                         ),
                       ),
-                      SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
                       // Botón demo
                       SizedBox(
@@ -118,25 +114,33 @@ class LoginScreen extends StatelessWidget {
                           onPressed: () {
                             // Acción demo
                           },
-                          icon: Icon(Icons.person),
-                          label: Text('Probar con cuenta demo'),
+                          icon: const Icon(Icons.person),
+                          label: const Text('Probar con cuenta demo'),
                         ),
                       ),
-                      SizedBox(height: 15),
+                      const SizedBox(height: 15),
 
                       // Registro
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text('¿No tienes cuenta? '),
+                          Text(
+                            '¿No tienes cuenta? ',
+                            style: theme.textTheme.bodyMedium,
+                          ),
                           GestureDetector(
                             onTap: () {
-                              // Acción registro
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RegisterScreen(),
+                                ),
+                              );
                             },
                             child: Text(
                               'Regístrate aquí',
-                              style: TextStyle(
-                                color: Colors.orange,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -148,10 +152,12 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               Text(
                 '🌿 Tradición culinaria del valle cochabambino 🌿',
-                style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onBackground.withOpacity(0.6),
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
