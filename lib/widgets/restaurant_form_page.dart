@@ -36,8 +36,9 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
   
   File? _logoImage;
   final MapController _mapController = MapController();
+    final List<Marker> _markers = [];
   LatLng? _selectedLocation;
-  final List<Marker> _markers = [];
+ 
 
   @override
   void initState() {
@@ -104,56 +105,56 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     }
   }
 
-  void _onMapTapped(TapPosition tapPosition, LatLng location) {
+  void _onMapTapped(TapPosition tapPosition, LatLng latLng) {
     setState(() {
-      _selectedLocation = location;
+      _selectedLocation = latLng;
       _markers.clear();
-      _addMarker(location);
+      _addMarker(latLng);
     });
   }
 
-  void _addMarker(LatLng location) {
-    _markers.add(
-      Marker(
-        point: location,
-        width: 40,
-        height: 40,
-        builder: (context) => const Icon(
-          Icons.location_pin,
-          color: Colors.red,
-          size: 40,
-        ),
+ void _addMarker(LatLng location) {
+  _markers.add(
+    Marker(
+      point: location,
+      width: 40,
+      height: 40,
+      builder: (context) => const Icon(
+        Icons.location_pin,
+        color: Colors.red,
+        size: 40,
       ),
-    );
-  }
+    ),
+  );
+}
 
-  Widget _buildMap() {
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
-        borderRadius: BorderRadius.circular(4),
+Widget _buildMap() {
+  return Container(
+    height: 200,
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.grey),
+      borderRadius: BorderRadius.circular(4),
+    ),
+    child: FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        center: _selectedLocation ?? LatLng(-17.397248, -66.161288), // Cochabamba
+        zoom: 12.0,
+        onTap: _onMapTapped,
       ),
-      child: FlutterMap(
-        mapController: _mapController,
-        options: MapOptions(
-          center: _selectedLocation ?? LatLng(-17.397248, -66.161288), // cochabamba
-          zoom: 12.0,
-          onTap: _onMapTapped,
+      children: [
+        TileLayer(
+          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+          userAgentPackageName: 'com.umssmovilaprogramming.foodpoint',
         ),
-        
-        children: [
-          // Capa de tiles (mapa)
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.umssmovilaprogramming.foodpoint', // Add this line
-          ),
-          // Capa de marcadores
-          MarkerLayer(markers: _markers),
-        ],
-      ),
-    );
-  }
+        MarkerLayer(
+          markers: _markers,
+        ),
+      ],
+    ),
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {

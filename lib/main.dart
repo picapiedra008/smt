@@ -29,6 +29,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         // Color primario basado en #FEF3F3
         primaryColor: const Color(0xFFFEF3F3),
@@ -86,8 +87,10 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: MyHomePage(title: 'Flutter Demo Home Page', firebaseConnected: firebaseConnected),
-    );
+      home: firebaseConnected
+      ? MyHomePage(title: 'Flutter Demo Home Page', firebaseConnected: firebaseConnected)
+      : const _FirebaseErrorScreen(),
+  );
   }
 }
 
@@ -131,6 +134,29 @@ class _MyHomePageState extends State<MyHomePage> {
           children: [
             DishCatalogPage(),     // ← Lista mock primero
             RestaurantFormPage(),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FirebaseErrorScreen extends StatelessWidget {
+  const _FirebaseErrorScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.error_outline, size: 56, color: Colors.red),
+            SizedBox(height: 12),
+            Text(
+              'No se pudo iniciar Firebase.\nRevisa tu conexión y configuración.',
+              textAlign: TextAlign.center,
+            ),
           ],
         ),
       ),

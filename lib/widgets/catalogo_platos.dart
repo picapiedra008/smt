@@ -1,132 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// =====================
-/// Modelos (mock)
-/// =====================
-class Restaurant {
-  final String nombre;
-  final String direccion;
-  final double distanciaKm;
-  final double rating;
-  final String horario;
+import '../models/dish.dart';
+import '../models/restaurant.dart';
+import '../services/dish_service.dart';
 
-  Restaurant({
-    required this.nombre,
-    required this.direccion,
-    required this.distanciaKm,
-    required this.rating,
-    required this.horario,
-  });
-}
-
-class Dish {
-  final String nombre;
-  final String imagenUrl;
-  final String tipo;       // "Almuerzo" | "Cena"
-  final int restaurantes;  // cantidad total
-  final double rating;     // 0.0 - 5.0
-  final List<Restaurant> disponibles;
-
-  Dish({
-    required this.nombre,
-    required this.imagenUrl,
-    required this.tipo,
-    required this.restaurantes,
-    required this.rating,
-    required this.disponibles,
-  });
-}
-
-/// =====================
-/// Datos Mock
-/// =====================
-final _mockDishes = <Dish>[
-  Dish(
-    nombre: 'Pique Macho',
-    imagenUrl: 'https://images.unsplash.com/photo-1553621042-f6e147245754?q=80&w=800',
-    tipo: 'Almuerzo',
-    restaurantes: 8,
-    rating: 4.7,
-    disponibles: [
-      Restaurant(
-        nombre: 'La Casa del Pique',
-        direccion: 'Av. América #450, Cochabamba',
-        distanciaKm: 1.2,
-        rating: 4.7,
-        horario: 'Abierto hasta 9 PM',
-      ),
-      Restaurant(
-        nombre: 'Sabores del Valle',
-        direccion: 'Calle España #120, Centro',
-        distanciaKm: 2.1,
-        rating: 4.6,
-        horario: 'Abierto hasta 10 PM',
-      ),
-    ],
-  ),
-  Dish(
-    nombre: 'Sopa de Maní',
-    imagenUrl: 'https://i.pinimg.com/736x/71/38/f5/7138f594579a706bab8b17184f591d8b.jpg',
-    tipo: 'Almuerzo',
-    restaurantes: 6,
-    rating: 4.8,
-    disponibles: [
-      Restaurant(
-        nombre: 'La Salteñería Paceña',
-        direccion: 'Av. 16 de Julio #1234, La Paz',
-        distanciaKm: 1.8,
-        rating: 4.8,
-        horario: 'Abierto hasta 8 PM',
-      ),
-      Restaurant(
-        nombre: 'Sabores del Altiplano',
-        direccion: 'Calle Sagárnaga #456, Centro',
-        distanciaKm: 2.5,
-        rating: 4.9,
-        horario: 'Abierto hasta 10 PM',
-      ),
-      Restaurant(
-        nombre: 'Doña Manuela',
-        direccion: 'Av. Blanco Galindo km 5',
-        distanciaKm: 3.2,
-        rating: 4.7,
-        horario: 'Abierto hasta 7 PM',
-      ),
-    ],
-  ),
-  Dish(
-    nombre: 'Anticuchos',
-    imagenUrl: 'https://images.unsplash.com/photo-1553621042-f6e147245754?q=80&w=800',
-    tipo: 'Cena',
-    restaurantes: 15,
-    rating: 4.6,
-    disponibles: [
-      Restaurant(
-        nombre: 'Anticuchería La Grilla',
-        direccion: 'C. Aroma #77, Centro',
-        distanciaKm: 0.9,
-        rating: 4.6,
-        horario: 'Abierto hasta 11 PM',
-      ),
-      Restaurant(
-        nombre: 'Brasas Andinas',
-        direccion: 'Av. Circunvalación #900',
-        distanciaKm: 3.8,
-        rating: 4.5,
-        horario: 'Abierto hasta 12 AM',
-      ),
-    ],
-  ),
-];
-
-/// =====================
-/// Pantalla Catálogo
-/// =====================
 class DishCatalogPage extends StatelessWidget {
   const DishCatalogPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final service = DishService();
+
     return Scaffold(
       backgroundColor: const Color(0xFFFEF3F3),
       body: SafeArea(
@@ -144,13 +29,31 @@ class DishCatalogPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
+
               Expanded(
-                child: ListView.separated(
-                  itemCount: _mockDishes.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 14),
-                  itemBuilder: (context, index) {
-                    final d = _mockDishes[index];
-                    return _DishCard(dish: d);
+                child: StreamBuilder<List<Dish>>(
+                  stream: service.streamDishes(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+
+                    final dishes = snapshot.data ?? [];
+                    if (dishes.isEmpty) {
+                      return const Center(child: Text('No hay platos aún'));
+                    }
+
+                    return ListView.separated(
+                      itemCount: dishes.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 14),
+                      itemBuilder: (context, index) {
+                        final d = dishes[index];
+                        return _DishCard(dish: d);
+                      },
+                    );
                   },
                 ),
               ),
@@ -162,9 +65,6 @@ class DishCatalogPage extends StatelessWidget {
   }
 }
 
-/// =====================
-/// Card de Plato
-/// =====================
 class _DishCard extends StatelessWidget {
   final Dish dish;
   const _DishCard({required this.dish});
@@ -192,7 +92,6 @@ class _DishCard extends StatelessWidget {
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Imagen
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
@@ -200,11 +99,24 @@ class _DishCard extends StatelessWidget {
                   width: 100,
                   height: 90,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      width: 100,
+                      height: 90,
+                      color: Colors.grey[300],
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.image_not_supported,
+                        color: Colors.grey,
+                        size: 40,
+                      ),
+                    );
+                  },
                 ),
               ),
+
               const SizedBox(width: 12),
 
-              // Centro
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +152,6 @@ class _DishCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Derecha: limitado para evitar overflow
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 92),
                 child: FittedBox(
@@ -257,7 +168,7 @@ class _DishCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          dish.tipo,
+                          dish.tipo.isEmpty ? '—' : dish.tipo,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
@@ -288,9 +199,6 @@ class _DishCard extends StatelessWidget {
   }
 }
 
-/// =====================
-/// Modal de Detalle
-/// =====================
 class DishDetailSheet extends StatelessWidget {
   final Dish dish;
   const DishDetailSheet({super.key, required this.dish});
@@ -298,6 +206,7 @@ class DishDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final themeText = const TextStyle(color: Colors.black87);
+    final service = DishService();
 
     return DraggableScrollableSheet(
       expand: false,
@@ -311,7 +220,7 @@ class DishDetailSheet extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header con título y cerrar
+              // Header
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -333,19 +242,41 @@ class DishDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Imagen grande
+              // Imagen grande en el modal
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
                 child: Image.network(
-                  dish.imagenUrl,
+                  dish.imagenUrl.trim(),
                   height: 180,
                   width: double.infinity,
                   fit: BoxFit.cover,
+                  // loader opcional
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    return SizedBox(
+                      height: 180,
+                      child: Center(
+                        child: CircularProgressIndicator(value: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
+                            : null),
+                      ),
+                    );
+                  },
+                  // fallback si falla
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 180,
+                      width: double.infinity,
+                      color: Colors.grey[300],
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
+                    );
+                  },
                 ),
               ),
+
               const SizedBox(height: 12),
 
-              // Fila: chip de tipo + rating
               Row(
                 children: [
                   Container(
@@ -355,7 +286,7 @@ class DishDetailSheet extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      dish.tipo,
+                      dish.tipo.isEmpty ? '—' : dish.tipo,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -370,24 +301,38 @@ class DishDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
-              // Título sección
               Row(
                 children: [
                   const Icon(Icons.group_outlined, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
-                    'Restaurantes Disponibles (${dish.disponibles.length})',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    'Restaurantes Disponibles (${dish.restaurantes})',
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
 
-              // Lista de restaurantes
-              ...dish.disponibles.map((r) => _RestaurantCard(r)),
+              // Si aún NO tienes subcolección, esto mostrará un placeholder.
+              FutureBuilder<List<Restaurant>>(
+                future: service.fetchRestaurantsForDish(dish.id),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 20),
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (snap.hasError) {
+                    return Text('Error al cargar restaurantes: ${snap.error}');
+                  }
+                  final rs = snap.data ?? [];
+                  if (rs.isEmpty) {
+                    return const Text('Aún sin restaurantes vinculados a este plato.');
+                  }
+                  return Column(children: rs.map((r) => _RestaurantCard(r)).toList());
+                },
+              ),
             ],
           ),
         );
@@ -396,9 +341,6 @@ class DishDetailSheet extends StatelessWidget {
   }
 }
 
-/// =====================
-/// Card de Restaurante
-/// =====================
 class _RestaurantCard extends StatelessWidget {
   final Restaurant r;
   const _RestaurantCard(this.r);
@@ -412,51 +354,34 @@ class _RestaurantCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.black12),
-        boxShadow: const [
-          BoxShadow(
-            blurRadius: 4,
-            offset: Offset(0, 2),
-            color: Color(0x14000000),
-          ),
-        ],
+        boxShadow: const [BoxShadow(blurRadius: 4, offset: Offset(0, 2), color: Color(0x14000000))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Nombre + distancia
           Row(
             children: [
               Expanded(
                 child: Text(
                   r.nombre,
-                  style: const TextStyle(
-                    fontSize: 15.5,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
+                  style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: Colors.black87),
                 ),
               ),
-              Text('${r.distanciaKm.toStringAsFixed(1)} km',
-                  style: const TextStyle(color: Colors.black54)),
+              Text('${r.distanciaKm.toStringAsFixed(1)} km', style: const TextStyle(color: Colors.black54)),
             ],
           ),
           const SizedBox(height: 4),
-          Text(
-            r.direccion,
-            style: const TextStyle(color: Colors.black54),
-          ),
+          Text(r.direccion, style: const TextStyle(color: Colors.black54)),
           const SizedBox(height: 8),
           Row(
             children: [
               const Icon(Icons.star, color: Colors.orange, size: 18),
               const SizedBox(width: 4),
-              Text(r.rating.toStringAsFixed(1),
-                  style: const TextStyle(color: Colors.black87)),
+              Text(r.rating.toStringAsFixed(1), style: const TextStyle(color: Colors.black87)),
               const SizedBox(width: 16),
               const Text('•', style: TextStyle(color: Colors.black26)),
               const SizedBox(width: 16),
-              Text('Abierto hasta ${r.horario.split(" ").last}',
-                  style: const TextStyle(color: Colors.black54)),
+              Text('Abierto hasta ${r.horario.split(" ").last}', style: const TextStyle(color: Colors.black54)),
             ],
           ),
         ],
