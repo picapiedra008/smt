@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'package:food_point/ui/core/themes/app_theme.dart';
 
 import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
+import 'package:food_point/ui/listarRestaurantes/view_model/listar_restaurantes_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,7 +35,8 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system, // usa el modo del dispositivo
-      home: RestaurantFormPage(restaurantId: "T21GraUMgRWLmQDj6kma",),
+      //home: RestaurantFormPage(restaurantId: "T21GraUMgRWLmQDj6kma",),
+      home:RestaurantesPage()
     );
   }
 }
