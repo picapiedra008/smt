@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:food_point/ui/auth/view_model/registro_screen.dart';
-
+import 'package:food_point/ui/home/view_model/home_screen.dart';
+import 'package:food_point/ui/listarRestaurantes/view_model/listar_restaurantes_screen.dart';
 class LoginScreen extends StatelessWidget {
+  final bool firebaseConnected;
+
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  LoginScreen({super.key});
+  LoginScreen({super.key, required this.firebaseConnected});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context); // 👈 obtiene colores del tema actual
+    final theme = Theme.of(context);
 
     return Scaffold(
       body: Center(
@@ -73,7 +76,7 @@ class LoginScreen extends StatelessWidget {
                       // Email
                       TextField(
                         controller: emailController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Correo Electrónico',
                           hintText: 'tu@email.com',
                         ),
@@ -100,7 +103,13 @@ class LoginScreen extends StatelessWidget {
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: () {
-                            // Acción de login
+                            // Aquí luego pondrás auth real
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const RestaurantesPage(),
+                              ),
+                            );
                           },
                           child: const Text('Iniciar Sesión'),
                         ),
@@ -112,7 +121,12 @@ class LoginScreen extends StatelessWidget {
                         width: double.infinity,
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // Acción demo
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const HomeScreen(),
+                              ),
+                            );
                           },
                           icon: const Icon(Icons.person),
                           label: const Text('Probar con cuenta demo'),

@@ -9,9 +9,15 @@ import 'package:food_point/ui/listarRestaurantes/view_model/listar_restaurantes_
 
 import 'widgets/catalogo_platos.dart';
 
+
+import 'firebase_options.dart';
+import 'package:food_point/ui/auth/view_model/login_screen.dart';
+import 'package:food_point/ui/core/themes/app_theme.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool firebaseConnected = false;
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
@@ -21,6 +27,7 @@ void main() async {
     // If initialization fails we set connected=false and allow the app to run
     firebaseConnected = false;
   }
+
   runApp(MyApp(firebaseConnected: firebaseConnected));
 }
 
@@ -29,7 +36,6 @@ class MyApp extends StatelessWidget {
 
   const MyApp({super.key, required this.firebaseConnected});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -40,10 +46,10 @@ class MyApp extends StatelessWidget {
       //home: RestaurantFormPage(restaurantId: "T21GraUMgRWLmQDj6kma",),
       //home:RestaurantesPage(),
       debugShowCheckedModeBanner: false,
-      
-      home: firebaseConnected
+      home: LoginScreen(firebaseConnected: firebaseConnected),
+      /*home: firebaseConnected
       ? MyHomePage(title: 'Flutter Demo Home Page', firebaseConnected: firebaseConnected)
-      : const _FirebaseErrorScreen(),
+      : const _FirebaseErrorScreen(),*/
   );
   }
 }

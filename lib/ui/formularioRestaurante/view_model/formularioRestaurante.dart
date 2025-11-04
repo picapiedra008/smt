@@ -2,9 +2,11 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
+import 'package:food_point/ui/listarRestaurantes/view_model/listar_restaurantes_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 final FirebaseFirestore db = FirebaseFirestore.instance;
 
@@ -159,88 +161,222 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     }
   }
 
-  Future<void> _saveOrUpdateRestaurant() async {
-    if (!_formKey.currentState!.validate()) return;
+  Future<void> _confirmarEliminacion() async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text("Confirmar Eliminación"),
+      content: const Text(
+          "¿Estás seguro de que quieres eliminar este restaurante? Esta acción no se puede deshacer."),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text("Cancelar"),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(true),
+          style: TextButton.styleFrom(foregroundColor: Colors.red),
+          child: const Text("Eliminar"),
+        ),
+      ],
+    ),
+  );
 
-    setState(() {
-      _isLoading = true;
-    });
+  if (confirmed == true) {
+    await _eliminarRestaurante();
+  }
+}
 
-    try {
-      final location = _selectedLocation != null
-          ? '${_selectedLocation!.latitude},${_selectedLocation!.longitude}'
-          : '';
+Future<void> _eliminarRestaurante() async {
+  if (widget.restaurantId == null) return;
 
-      // Convertir imagen a base64 si hay una nueva
-      String? logoBase64;
-      if (_logoImage != null) {
-        final bytes = await _logoImage!.readAsBytes();
-        logoBase64 = base64Encode(bytes);
-      } else if (_logoBase64 != null) {
-        logoBase64 = _logoBase64; // Mantener la existente
-      }
+  setState(() {
+    _isLoading = true;
+  });
 
-      // Preparar datos del restaurante
-      final restaurantData = {
-        'name': _nameController.text.trim(),
-        'description': _descriptionController.text.trim(),
-        'openingTime': _openingTime != null ? _timeOfDayToString(_openingTime!) : null,
-        'closingTime': _closingTime != null ? _timeOfDayToString(_closingTime!) : null,
-        'location': location,
-        'updatedAt': FieldValue.serverTimestamp(),
-      };
+  try {
+    // 1. Eliminar todos los platos del restaurante
+    final foodsSnapshot = await db
+        .collection('foods')
+        .where('restaurantId', isEqualTo: widget.restaurantId)
+        .get();
 
-      // Agregar logo base64 si existe
-      if (logoBase64 != null) {
-        restaurantData['logoBase64'] = logoBase64;
-      }
+    WriteBatch batch = db.batch();
+    for (var doc in foodsSnapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
 
-      String restaurantId;
+    // 2. Eliminar el restaurante
+    await db.collection('restaurants').doc(widget.restaurantId!).delete();
 
-      if (widget.restaurantId != null) {
-        // ACTUALIZAR restaurante existente
-        restaurantId = widget.restaurantId!;
-        await db.collection('restaurants').doc(restaurantId).update(restaurantData);
-        
-        // ELIMINAR todos los platos existentes y crear los nuevos
-        await _replaceAllFoods(restaurantId);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Restaurante actualizado exitosamente')),
-        );
-      } else {
-        // CREAR nuevo restaurante
-        restaurantData['createdAt'] = FieldValue.serverTimestamp();
-        
-        DocumentReference docRef = await db.collection('restaurants').add(restaurantData);
-        restaurantId = docRef.id;
-        
-        // Crear platos para el nuevo restaurante
-        await _createFoods(restaurantId);
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Restaurante creado exitosamente')),
-        );
-      }
-
-      // Regresar a la pantalla anterior
-      if (mounted) {
-        Navigator.pop(context);
-      }
-
-    } catch (e) {
-      print('Error al guardar: $e');
+    // 3. Mostrar toast de éxito
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al guardar: $e')),
+        const SnackBar(
+          content: Text("Restaurante eliminado exitosamente"),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
       );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    }
+
+    // 4. Redirigir a la lista de restaurantes
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => RestaurantesPage()),
+        (route) => false,
+      );
+    }
+
+  } catch (e) {
+    print('Error al eliminar restaurante: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Error al eliminar: $e"),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
+}
+
+  Future<void> _saveOrUpdateRestaurant() async {
+  if (!_formKey.currentState!.validate()) return;
+
+  final isEditing = widget.restaurantId != null;
+
+  // Si es edición, preguntar confirmación
+  if (isEditing) {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Guardar Cambios"),
+        content: const Text("¿Estás seguro de que quieres guardar los cambios realizados?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Cancelar"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Guardar"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) {
+      return; // El usuario canceló
+    }
+  }
+
+  setState(() {
+    _isLoading = true;
+  });
+
+  try {
+    final location = _selectedLocation != null
+        ? '${_selectedLocation!.latitude},${_selectedLocation!.longitude}'
+        : '';
+
+    // Convertir imagen a base64 si hay una nueva
+    String? logoBase64;
+    if (_logoImage != null) {
+      final bytes = await _logoImage!.readAsBytes();
+      logoBase64 = base64Encode(bytes);
+    } else if (_logoBase64 != null) {
+      logoBase64 = _logoBase64; // Mantener la existente
+    }
+
+    // Preparar datos del restaurante
+    final restaurantData = {
+      'name': _nameController.text.trim(),
+      'description': _descriptionController.text.trim(),
+      'openingTime': _openingTime != null ? _timeOfDayToString(_openingTime!) : null,
+      'closingTime': _closingTime != null ? _timeOfDayToString(_closingTime!) : null,
+      'location': location,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    // Agregar logo base64 si existe
+    if (logoBase64 != null) {
+      restaurantData['logoBase64'] = logoBase64;
+    }
+
+    String restaurantId;
+    String message;
+
+    if (isEditing) {
+      // ACTUALIZAR restaurante existente
+      restaurantId = widget.restaurantId!;
+      await db.collection('restaurants').doc(restaurantId).update(restaurantData);
+      
+      // ELIMINAR todos los platos existentes y crear los nuevos
+      await _replaceAllFoods(restaurantId);
+      
+      message = 'Restaurante actualizado exitosamente';
+    } else {
+      // CREAR nuevo restaurante
+      restaurantData['createdAt'] = FieldValue.serverTimestamp();
+      
+      DocumentReference docRef = await db.collection('restaurants').add(restaurantData);
+      restaurantId = docRef.id;
+      
+      // Crear platos para el nuevo restaurante
+      await _createFoods(restaurantId);
+      
+      message = 'Restaurante creado exitosamente';
+    }
+
+    // Mostrar toast de éxito
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+    // Redirigir a la lista de restaurantes
+    if (mounted) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => RestaurantesPage()),
+        (route) => false,
+      );
+    }
+
+  } catch (e) {
+    print('Error al guardar: $e');
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al guardar: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+}
 
   Future<void> _replaceAllFoods(String restaurantId) async {
     try {
@@ -660,6 +796,28 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
                             )
                           : Text(isEditing ? 'Actualizar' : 'Guardar'),
                     ),
+
+                    if (isEditing) ...[
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: _isLoading ? null : _confirmarEliminacion,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: _isLoading 
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text("Eliminar Restaurante"),
+                      ),
+                    ],
+                    
                   ],
                 ),
               ),
