@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/dish.dart';
 import '../models/restaurant.dart';
 import '../data/services/dish_service.dart';
+import 'dart:convert';
+
 
 class DishCatalogPage extends StatelessWidget {
   const DishCatalogPage({super.key});
@@ -94,24 +96,10 @@ class _DishCard extends StatelessWidget {
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  dish.imagenUrl,
+                child: _buildDishImage(
+                  dish,
                   width: 100,
                   height: 90,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 100,
-                      height: 90,
-                      color: Colors.grey[300],
-                      alignment: Alignment.center,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                        size: 40,
-                      ),
-                    );
-                  },
                 ),
               ),
 
@@ -242,36 +230,13 @@ class DishDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 8),
 
-              // Imagen grande en el modal
+              // Imagen grande
               ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(
-                  dish.imagenUrl.trim(),
+                child: _buildDishImage(
+                  dish,
                   height: 180,
                   width: double.infinity,
-                  fit: BoxFit.cover,
-                  // loader opcional
-                  loadingBuilder: (context, child, progress) {
-                    if (progress == null) return child;
-                    return SizedBox(
-                      height: 180,
-                      child: Center(
-                        child: CircularProgressIndicator(value: progress.expectedTotalBytes != null
-                            ? progress.cumulativeBytesLoaded / (progress.expectedTotalBytes ?? 1)
-                            : null),
-                      ),
-                    );
-                  },
-                  // fallback si falla
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      height: 180,
-                      width: double.infinity,
-                      color: Colors.grey[300],
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 48),
-                    );
-                  },
                 ),
               ),
 
@@ -313,7 +278,6 @@ class DishDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 10),
 
-              // Si aún NO tienes subcolección, esto mostrará un placeholder.
               FutureBuilder<List<Restaurant>>(
                 future: service.fetchRestaurantsForDish(dish.id),
                 builder: (context, snap) {
@@ -330,7 +294,9 @@ class DishDetailSheet extends StatelessWidget {
                   if (rs.isEmpty) {
                     return const Text('Aún sin restaurantes vinculados a este plato.');
                   }
-                  return Column(children: rs.map((r) => _RestaurantCard(r)).toList());
+                  return Column(
+                    children: rs.map((r) => _RestaurantCard(r)).toList(),
+                  );
                 },
               ),
             ],
@@ -354,7 +320,13 @@ class _RestaurantCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.black12),
-        boxShadow: const [BoxShadow(blurRadius: 4, offset: Offset(0, 2), color: Color(0x14000000))],
+        boxShadow: const [
+          BoxShadow(
+            blurRadius: 4,
+            offset: Offset(0, 2),
+            color: Color(0x14000000),
+          )
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -364,10 +336,17 @@ class _RestaurantCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   r.nombre,
-                  style: const TextStyle(fontSize: 15.5, fontWeight: FontWeight.w700, color: Colors.black87),
+                  style: const TextStyle(
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
-              Text('${r.distanciaKm.toStringAsFixed(1)} km', style: const TextStyle(color: Colors.black54)),
+              Text(
+                '${r.distanciaKm.toStringAsFixed(1)} km',
+                style: const TextStyle(color: Colors.black54),
+              ),
             ],
           ),
           const SizedBox(height: 4),
@@ -377,15 +356,67 @@ class _RestaurantCard extends StatelessWidget {
             children: [
               const Icon(Icons.star, color: Colors.orange, size: 18),
               const SizedBox(width: 4),
-              Text(r.rating.toStringAsFixed(1), style: const TextStyle(color: Colors.black87)),
+              Text(r.rating.toStringAsFixed(1),
+                  style: const TextStyle(color: Colors.black87)),
               const SizedBox(width: 16),
               const Text('•', style: TextStyle(color: Colors.black26)),
               const SizedBox(width: 16),
-              Text('Abierto hasta ${r.horario.split(" ").last}', style: const TextStyle(color: Colors.black54)),
+              Text(
+                'Abierto hasta ${r.horario.split(" ").last}',
+                style: const TextStyle(color: Colors.black54),
+              ),
             ],
           ),
         ],
       ),
     );
   }
+}
+
+/// Helper para mostrar imagen desde Base64 o URL
+Widget _buildDishImage(Dish dish,
+    {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+  // 1) Base64 primero
+  if (dish.imagenBase64 != null && dish.imagenBase64!.isNotEmpty) {
+    try {
+      return Image.memory(
+        base64Decode(dish.imagenBase64!),
+        width: width,
+        height: height,
+        fit: fit,
+      );
+    } catch (_) {
+      // Si algo falla al decodificar, caemos al fallback
+    }
+  }
+
+  // 2) Luego URL normal
+  if (dish.imagenUrl.isNotEmpty) {
+    return Image.network(
+      dish.imagenUrl,
+      width: width,
+      height: height,
+      fit: fit,
+      errorBuilder: (context, error, stackTrace) {
+        return _dishImagePlaceholder(width, height);
+      },
+    );
+  }
+
+  // 3) Si no hay nada, placeholder
+  return _dishImagePlaceholder(width, height);
+}
+
+Widget _dishImagePlaceholder(double? width, double? height) {
+  return Container(
+    width: width,
+    height: height,
+    color: Colors.grey[300],
+    alignment: Alignment.center,
+    child: const Icon(
+      Icons.image_not_supported,
+      color: Colors.grey,
+      size: 40,
+    ),
+  );
 }
