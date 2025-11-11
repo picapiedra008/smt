@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:food_point/ui/auth/view_model/registro_screen.dart';
 import 'package:food_point/ui/home/view_model/home_screen.dart';
-import 'package:food_point/ui/listarRestaurantes/view_model/listar_restaurantes_screen.dart';
+import 'package:food_point/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
 class LoginScreen extends StatelessWidget {
   final bool firebaseConnected;
 

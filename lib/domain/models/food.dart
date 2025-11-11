@@ -5,6 +5,7 @@ class Food {
   final String nombre;
   final String? descripcion;
   final String imagen;
+  final String? imagenBase64;
   final int restaurantes;
   final String tipo;
   final double rating;
@@ -13,6 +14,7 @@ class Food {
     required this.id,
     required this.nombre,
     required this.imagen,
+    required this.imagenBase64,
     required this.restaurantes,
     required this.tipo,
     required this.rating,
@@ -27,6 +29,7 @@ class Food {
       nombre: data['nombre'] ?? 'Sin nombre',
       descripcion: data['descripcion'],
       imagen: data['imagen'] ?? '',
+      imagenBase64: data['imagenBase64'],
       restaurantes: (data['restaurantes'] ?? 0) is int
           ? data['restaurantes'] as int
           : int.tryParse(data['restaurantes'].toString()) ?? 0,

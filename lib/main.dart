@@ -5,14 +5,10 @@ import 'firebase_options.dart';
 import 'package:food_point/ui/core/themes/app_theme.dart';
 
 import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
-import 'package:food_point/ui/listarRestaurantes/view_model/listar_restaurantes_screen.dart';
 
 import 'widgets/catalogo_platos.dart';
 
 
-import 'firebase_options.dart';
-import 'package:food_point/ui/auth/view_model/login_screen.dart';
-import 'package:food_point/ui/core/themes/app_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
