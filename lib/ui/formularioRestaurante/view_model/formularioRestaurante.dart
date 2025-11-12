@@ -233,23 +233,7 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
               ],
             ),
             const SizedBox(height: 8),
-            
-            // Visibilidad del horario
-            DropdownButtonFormField<String>(
-              value: hour['visibility'],
-              decoration: const InputDecoration(
-                labelText: 'Visibilidad',
-              ),
-              items: const [
-                DropdownMenuItem(value: 'publico', child: Text('Público')),
-                DropdownMenuItem(value: 'oculto', child: Text('Oculto')),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _openingHours[index]['visibility'] = value;
-                });
-              },
-            ),
+           
           ],
         ),
       ),
@@ -414,7 +398,7 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     );
   }
 
-  // ========== MÉTODOS EXISTENTES ==========
+
 
   Future<void> _loadRestaurantData() async {
     setState(() {
@@ -571,7 +555,6 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
           'openingTime': _timeOfDayToString(hour['openingTime']),
           'closingTime': _timeOfDayToString(hour['closingTime']),
           'days': hour['days'],
-          'visibility': hour['visibility'],
         };
       }).toList();
 
