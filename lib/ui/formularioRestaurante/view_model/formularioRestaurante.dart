@@ -28,6 +28,8 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
 
+  String user_id = "user1";// Cuando este listo el login, deben poner el metodo para obtener el id del usuario logeado
+
   File? _logoImage;
   String? _logoBase64;
   LatLng? _selectedLocation;
@@ -398,8 +400,6 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     );
   }
 
-
-
   Future<void> _loadRestaurantData() async {
     setState(() {
       _isLoading = true;
@@ -565,6 +565,7 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
         'visibility': _restaurantVisibility,
         'openingHours': openingHoursData,
         'updatedAt': FieldValue.serverTimestamp(),
+        'userId': user_id,
       };
 
       if (logoBase64 != null) {
@@ -594,9 +595,9 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
       }
 
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantesPage()),
+          '/perfil/restaurantes',
           (route) => false,
         );
       }
@@ -672,7 +673,6 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     }
   }
 
-  // ========== MÉTODOS DE UI ==========
 
   Future<void> _pickImage({bool isLogo = true, int? foodIndex}) async {
     final picker = ImagePicker();
@@ -825,6 +825,12 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? 'Editar Restaurante' : 'Crear Restaurante'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -1007,9 +1013,9 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
       }
 
       if (mounted) {
-        Navigator.pushAndRemoveUntil(
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          MaterialPageRoute(builder: (context) => RestaurantesPage()),
+          '/perfil/restaurantes',
           (route) => false,
         );
       }

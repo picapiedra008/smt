@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:food_point/domain/models/food.dart';
+import 'package:food_point/widgets/bottom_nav_var.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -16,6 +17,7 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Sabores de Cochabamba'),
         centerTitle: true,
       ),
+      bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance.collection('platos').snapshots(),
         builder: (context, snapshot) {
@@ -88,8 +90,10 @@ class HomeScreen extends StatelessWidget {
                       .map((food) => _CatalogFoodCard(food: food))
                       .toList(),
                 ),
+                
               ],
             ),
+            
           );
         },
       ),
@@ -199,8 +203,11 @@ class _FeaturedFoodCard extends StatelessWidget {
               ],
             ),
           ),
+           
         ],
+        
       ),
+      
     );
   }
 }
