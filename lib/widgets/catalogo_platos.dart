@@ -1,11 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/dish.dart';
 import '../models/restaurant.dart';
 import '../data/services/dish_service.dart';
-import 'dart:convert';
-
 
 class DishCatalogPage extends StatelessWidget {
   const DishCatalogPage({super.key});
@@ -237,6 +238,7 @@ class DishDetailSheet extends StatelessWidget {
                   dish,
                   height: 180,
                   width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
 
@@ -356,8 +358,10 @@ class _RestaurantCard extends StatelessWidget {
             children: [
               const Icon(Icons.star, color: Colors.orange, size: 18),
               const SizedBox(width: 4),
-              Text(r.rating.toStringAsFixed(1),
-                  style: const TextStyle(color: Colors.black87)),
+              Text(
+                r.rating.toStringAsFixed(1),
+                style: const TextStyle(color: Colors.black87),
+              ),
               const SizedBox(width: 16),
               const Text('•', style: TextStyle(color: Colors.black26)),
               const SizedBox(width: 16),
@@ -373,20 +377,27 @@ class _RestaurantCard extends StatelessWidget {
   }
 }
 
-/// Helper para mostrar imagen desde Base64 o URL
-Widget _buildDishImage(Dish dish,
-    {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+/// --------- Helpers de imagen (Base64 o URL) ---------
+
+Widget _buildDishImage(
+  Dish dish, {
+  double? width,
+  double? height,
+  BoxFit fit = BoxFit.cover,
+}) {
   // 1) Base64 primero
   if (dish.imagenBase64 != null && dish.imagenBase64!.isNotEmpty) {
     try {
+      final bytes = _decodeBase64Image(dish.imagenBase64!);
       return Image.memory(
-        base64Decode(dish.imagenBase64!),
+        bytes,
         width: width,
         height: height,
         fit: fit,
       );
-    } catch (_) {
-      // Si algo falla al decodificar, caemos al fallback
+    } catch (e) {
+      debugPrint('Error decodificando Base64: $e');
+      // sigue abajo a URL / placeholder
     }
   }
 
@@ -398,6 +409,7 @@ Widget _buildDishImage(Dish dish,
       height: height,
       fit: fit,
       errorBuilder: (context, error, stackTrace) {
+        debugPrint('Error cargando imagen por URL: $error');
         return _dishImagePlaceholder(width, height);
       },
     );
@@ -405,6 +417,25 @@ Widget _buildDishImage(Dish dish,
 
   // 3) Si no hay nada, placeholder
   return _dishImagePlaceholder(width, height);
+}
+
+Uint8List _decodeBase64Image(String base64String) {
+  // Si viene como 'data:image/png;base64,AAAA...'
+  if (base64String.contains(',')) {
+    base64String = base64String.split(',').last;
+  }
+
+  // Quitar espacios / saltos
+  base64String = base64String.trim();
+
+  // Ajustar padding si hace falta (longitud múltiplo de 4)
+  final remainder = base64String.length % 4;
+  if (remainder != 0) {
+    base64String =
+        base64String.padRight(base64String.length + (4 - remainder), '=');
+  }
+
+  return base64Decode(base64String);
 }
 
 Widget _dishImagePlaceholder(double? width, double? height) {

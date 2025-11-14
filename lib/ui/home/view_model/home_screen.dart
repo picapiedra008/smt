@@ -1,4 +1,6 @@
 import 'dart:math';
+import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -107,7 +109,6 @@ class _FeaturedFoodCard extends StatelessWidget {
     final theme = Theme.of(context);
 
     return InkWell(
-      // 👇 Al tocar el "Plato del Día" vamos a la pantalla de detalle
       onTap: () {
         Navigator.push(
           context,
@@ -130,14 +131,11 @@ class _FeaturedFoodCard extends StatelessWidget {
                 SizedBox(
                   height: 190,
                   width: double.infinity,
-                  child: Image.network(
+                  child: _buildFoodImage(
                     food.imagen,
+                    width: double.infinity,
+                    height: 190,
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: Colors.grey.shade300,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.image_not_supported),
-                    ),
                   ),
                 ),
                 Positioned(
@@ -233,18 +231,11 @@ class _CatalogFoodCard extends StatelessWidget {
         contentPadding: const EdgeInsets.all(10),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
-          child: Image.network(
+          child: _buildFoodImage(
             food.imagen,
             width: 70,
             height: 70,
             fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) => Container(
-              width: 70,
-              height: 70,
-              color: Colors.grey.shade300,
-              alignment: Alignment.center,
-              child: const Icon(Icons.image),
-            ),
           ),
         ),
         title: Text(
@@ -281,7 +272,6 @@ class _CatalogFoodCard extends StatelessWidget {
           ],
         ),
         onTap: () {
-          // 👇 Aquí también navegamos al detalle
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -318,14 +308,9 @@ class FoodDetailScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(18),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: Image.network(
+                child: _buildFoodImage(
                   food.imagen,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey.shade300,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.image_not_supported),
-                  ),
                 ),
               ),
             ),
@@ -379,14 +364,78 @@ class FoodDetailScreen extends StatelessWidget {
               ),
 
             const SizedBox(height: 24),
-
-            // Aquí podrías luego agregar:
-            // - Lista de restaurantes donde se encuentra
-            // - Horarios
-            // - Precio promedio, etc.
           ],
         ),
       ),
     );
   }
+}
+
+/// ------------ Helpers para imagen (Base64 o URL) ------------
+
+Widget _buildFoodImage(
+  String imagen, {
+  double? width,
+  double? height,
+  BoxFit fit = BoxFit.cover,
+}) {
+  if (imagen.isEmpty) {
+    return _foodImagePlaceholder(width, height);
+  }
+
+  // 1) Intentar como Base64
+  try {
+    String base64String = imagen;
+
+    // Si viene como 'data:image/png;base64,AAAA...'
+    if (base64String.startsWith('data:image')) {
+      base64String = base64String.split(',').last;
+    }
+
+    base64String = base64String.trim();
+
+    // Ajustar padding (longitud múltiplo de 4)
+    final remainder = base64String.length % 4;
+    if (remainder != 0) {
+      base64String =
+          base64String.padRight(base64String.length + (4 - remainder), '=');
+    }
+
+    final bytes = base64Decode(base64String);
+
+    return Image.memory(
+      bytes,
+      width: width,
+      height: height,
+      fit: fit,
+    );
+  } catch (e) {
+    debugPrint('No es Base64 válido o falló decode: $e');
+  }
+
+  // 2) Si no era Base64, probar como URL normal
+  return Image.network(
+    imagen,
+    width: width,
+    height: height,
+    fit: fit,
+    errorBuilder: (context, error, stackTrace) {
+      debugPrint('Error cargando imagen por URL: $error');
+      return _foodImagePlaceholder(width, height);
+    },
+  );
+}
+
+Widget _foodImagePlaceholder(double? width, double? height) {
+  return Container(
+    width: width,
+    height: height,
+    color: Colors.grey[300],
+    alignment: Alignment.center,
+    child: const Icon(
+      Icons.image_not_supported,
+      color: Colors.grey,
+      size: 40,
+    ),
+  );
 }
