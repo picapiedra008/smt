@@ -106,100 +106,113 @@ class _FeaturedFoodCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Imagen + etiqueta
-          Stack(
-            children: [
-              SizedBox(
-                height: 190,
-                width: double.infinity,
-                child: Image.network(
-                  food.imagen,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey.shade300,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.image_not_supported),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Plato del Día',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ),
-            ],
+    return InkWell(
+      // 👇 Al tocar el "Plato del Día" vamos a la pantalla de detalle
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => FoodDetailScreen(food: food),
           ),
-          Padding(
-            padding:
-                const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        );
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagen + etiqueta
+            Stack(
               children: [
-                Text(
-                  food.nombre,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                SizedBox(
+                  height: 190,
+                  width: double.infinity,
+                  child: Image.network(
+                    food.imagen,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => Container(
+                      color: Colors.grey.shade300,
+                      alignment: Alignment.center,
+                      child: const Icon(Icons.image_not_supported),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
-                if (food.descripcion != null && food.descripcion!.isNotEmpty)
-                  Text(
-                    food.descripcion!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.grey.shade700,
-                      fontSize: 13,
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      'Plato del Día',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
                     ),
                   ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    const Icon(Icons.store_mall_directory,
-                        size: 16, color: Colors.grey),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${food.restaurantes} restaurantes',
-                      style: TextStyle(
-                        color: Colors.grey.shade700,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const Spacer(),
-                    const Icon(Icons.star, color: Colors.amber, size: 18),
-                    const SizedBox(width: 4),
-                    Text(
-                      food.rating.toStringAsFixed(1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.only(
+                  left: 16, right: 16, top: 12, bottom: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    food.nombre,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  if (food.descripcion != null &&
+                      food.descripcion!.isNotEmpty)
+                    Text(
+                      food.descripcion!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.grey.shade700,
+                        fontSize: 13,
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      const Icon(Icons.store_mall_directory,
+                          size: 16, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${food.restaurantes} restaurantes',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 12,
+                        ),
+                      ),
+                      const Spacer(),
+                      const Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        food.rating.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -213,8 +226,7 @@ class _CatalogFoodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      shape:
-          RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       margin: const EdgeInsets.symmetric(vertical: 8),
       elevation: 2,
       child: ListTile(
@@ -269,8 +281,111 @@ class _CatalogFoodCard extends StatelessWidget {
           ],
         ),
         onTap: () {
-          // TODO: detalle del plato/restaurante
+          // 👇 Aquí también navegamos al detalle
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => FoodDetailScreen(food: food),
+            ),
+          );
         },
+      ),
+    );
+  }
+}
+
+/// 🆕 Pantalla de detalle del plato
+class FoodDetailScreen extends StatelessWidget {
+  final Food food;
+
+  const FoodDetailScreen({super.key, required this.food});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(food.nombre),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Imagen grande
+            ClipRRect(
+              borderRadius: BorderRadius.circular(18),
+              child: AspectRatio(
+                aspectRatio: 16 / 9,
+                child: Image.network(
+                  food.imagen,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey.shade300,
+                    alignment: Alignment.center,
+                    child: const Icon(Icons.image_not_supported),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Rating + restaurantes
+            Row(
+              children: [
+                const Icon(Icons.star, color: Colors.amber),
+                const SizedBox(width: 4),
+                Text(
+                  food.rating.toStringAsFixed(1),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Icon(Icons.store_mall_directory, size: 20),
+                const SizedBox(width: 4),
+                Text(
+                  '${food.restaurantes} restaurantes',
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Tipo de plato
+            Chip(
+              label: Text(food.tipo),
+              backgroundColor: Colors.orange.shade100,
+              labelStyle: const TextStyle(
+                color: Colors.orange,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Descripción completa
+            if (food.descripcion != null && food.descripcion!.isNotEmpty)
+              Text(
+                food.descripcion!,
+                style: theme.textTheme.bodyMedium,
+              )
+            else
+              Text(
+                'Sin descripción disponible.',
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: Colors.grey.shade600),
+              ),
+
+            const SizedBox(height: 24),
+
+            // Aquí podrías luego agregar:
+            // - Lista de restaurantes donde se encuentra
+            // - Horarios
+            // - Precio promedio, etc.
+          ],
+        ),
       ),
     );
   }
