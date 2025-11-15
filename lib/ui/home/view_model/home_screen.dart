@@ -21,7 +21,7 @@ class HomeScreen extends StatelessWidget {
       ),
       bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('platos').snapshots(),
+        stream: FirebaseFirestore.instance.collection('foods').snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(child: Text('Error al cargar los platos'));
@@ -160,7 +160,6 @@ class _FeaturedFoodCard extends StatelessWidget {
                 ),
               ],
             ),
-<<<<<<< HEAD
             Padding(
               padding: const EdgeInsets.only(
                   left: 16, right: 16, top: 12, bottom: 12),
@@ -216,12 +215,6 @@ class _FeaturedFoodCard extends StatelessWidget {
             ),
           ],
         ),
-=======
-          ),
-           
-        ],
-        
->>>>>>> origin/main
       ),
       
     );
