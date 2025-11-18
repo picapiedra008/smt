@@ -595,12 +595,12 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
       }
 
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
+        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
           '/perfil/restaurantes',
           (route) => false,
         );
       }
+
 
     } catch (e) {
       print('Error al guardar: $e');
@@ -1013,12 +1013,12 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
       }
 
       if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
+        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
           '/perfil/restaurantes',
           (route) => false,
         );
       }
+
 
     } catch (e) {
       print('Error al eliminar restaurante: $e');
