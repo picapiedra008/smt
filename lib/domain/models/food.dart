@@ -6,10 +6,11 @@ class Food {
   final String? descripcion;
   /// Aquí guardamos lo que usemos para mostrar la imagen (puede ser URL o Base64)
   final String imagen;
-  final String? imagenBase64;
+  final String imagenBase64;
   final int restaurantes;
   final String tipo;
   final double rating;
+   final String restaurantId;
 
   Food({
     required this.id,
@@ -19,6 +20,7 @@ class Food {
     required this.restaurantes,
     required this.tipo,
     required this.rating,
+    required this.restaurantId,
     this.descripcion,
   });
 
@@ -42,13 +44,15 @@ class Food {
             '') as String;
 
     final imagenBase64 =
-        (data['imageBase64'] ?? data['imagenBase64']) as String?;
+        (data['imageBase64'] ?? data['imagenBase64']) as String;
 
     // Restaurantes: si no existe, 0
     final rawRest = data['restaurantes'] ?? data['restaurantsCount'] ?? 0;
     final restaurantes = rawRest is int
         ? rawRest
         : int.tryParse(rawRest.toString()) ?? 0;
+
+          final restaurantId = data['restaurantId'] ?? '';
 
     // Tipo / categoría
     final tipo = (data['tipo'] ?? data['category'] ?? '') as String;
@@ -68,6 +72,7 @@ class Food {
       restaurantes: restaurantes,
       tipo: tipo,
       rating: rating,
+      restaurantId: restaurantId,
     );
   }
 }
