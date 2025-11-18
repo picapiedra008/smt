@@ -50,7 +50,7 @@ class MyApp extends StatelessWidget {
         '/inicio': (context) => const HomeScreen(),
         '/catalogo': (context) => const DishCatalogPage(),
         '/restaurantes': (context) => const SaboresApp(),
-        '/perfil': (context) => const PerfilPage(),
+        '/perfil': (context) => PerfilPage(),
         '/perfil/restaurantes': (context) => const MisRestaurantesPage(),
         '/perfil/restaurantes/create': (context) => const RestaurantFormPage(),
         '/firebaseError': (context) => const _FirebaseErrorScreen(),

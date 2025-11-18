@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -55,13 +56,32 @@ class AuthService {
   }
 
   /// Crear usuario con email/password
-  Future<UserCredential> createUserWithEmail({
+  Future<UserCredential> createUserWithEmailAndProfile({
     required String email,
     required String password,
+    required String name,
+    String role = 'owner', // puedes cambiar rol por defecto
   }) async {
-    return await _auth.createUserWithEmailAndPassword(
+    // 1️⃣ Crear usuario en Firebase Auth
+    UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
+
+    User? user = userCredential.user;
+    if (user != null) {
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+      await userRef.set({
+        'name': name,
+        'email': email,
+        'role': role,
+        'photoUrl': null,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    return userCredential;
   }
 }

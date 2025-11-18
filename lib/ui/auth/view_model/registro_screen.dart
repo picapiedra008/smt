@@ -1,10 +1,28 @@
 import 'package:flutter/material.dart';
-import '../widgets/register_header.dart';
-import '../widgets/register_form.dart';
-import '../widgets/register_button.dart';
+import 'package:food_point/ui/auth/widgets/register_button.dart';
+import 'package:food_point/ui/auth/widgets/register_form.dart';
+import 'package:food_point/ui/auth/widgets/register_header.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _nombreController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nombreController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,9 +39,19 @@ class RegisterScreen extends StatelessWidget {
               children: [
                 const RegisterHeader(),
                 const SizedBox(height: 32),
-                const RegisterForm(),
+                RegisterForm(
+                  formKey: _formKey,
+                  nombreController: _nombreController,
+                  emailController: _emailController,
+                  passwordController: _passwordController,
+                ),
                 const SizedBox(height: 24),
-                const RegisterButton(),
+                RegisterButton(
+                  formKey: _formKey,
+                  nombreController: _nombreController,
+                  emailController: _emailController,
+                  passwordController: _passwordController,
+                ),
               ],
             ),
           ),

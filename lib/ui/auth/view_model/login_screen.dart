@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:food_point/data/services/auth_service.dart';
@@ -136,12 +137,40 @@ class LoginScreen extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // Aquí luego pondrás auth real con email/password
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const RestaurantesPage()),
-          );
+        onPressed: () async {
+          final email = emailController.text.trim();
+          final password = passwordController.text.trim();
+
+          if (email.isEmpty || password.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Ingresa email y contraseña')),
+            );
+            return;
+          }
+
+          try {
+            final userCredential = await AuthService.instance.signInWithEmail(
+              email: email,
+              password: password,
+            );
+
+            if (userCredential.user != null) {
+              // Usuario autenticado correctamente
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()),
+              );
+            }
+          } on FirebaseAuthException catch (e) {
+            // Mostrar error de autenticación
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
+          } catch (e) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
+          }
         },
         child: const Text('Iniciar Sesión'),
       ),
@@ -233,7 +262,7 @@ class LoginScreen extends StatelessWidget {
           // Redirigir a RestaurantesPage
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const RestaurantesPage()),
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
           );
         }
       } else {
