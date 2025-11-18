@@ -136,11 +136,12 @@ class _FeaturedFoodCard extends StatelessWidget {
                   height: 190,
                   width: double.infinity,
                   child: _buildFoodImage(
-                    food.imagen,
-                    width: double.infinity,
-                    height: 190,
-                    fit: BoxFit.cover,
-                  ),
+  food.imagenBase64,
+  width: double.infinity,
+  height: 190,
+  fit: BoxFit.cover,
+),
+
                 ),
                 Positioned(
                   top: 12,
@@ -192,7 +193,8 @@ class _FeaturedFoodCard extends StatelessWidget {
                           size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
-                        '${food.restaurantes} restaurantes',
+                        '1 restaurante',
+
                         style: TextStyle(
                           color: Colors.grey.shade700,
                           fontSize: 12,
@@ -237,11 +239,12 @@ class _CatalogFoodCard extends StatelessWidget {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: _buildFoodImage(
-            food.imagen,
-            width: 70,
-            height: 70,
-            fit: BoxFit.cover,
-          ),
+  food.imagenBase64,
+  width: 70,
+  height: 70,
+  fit: BoxFit.cover,
+),
+
         ),
         title: Text(
           food.nombre,
@@ -254,7 +257,8 @@ class _CatalogFoodCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text('${food.restaurantes} restaurantes'),
+            const Text('1 restaurante'),
+
             const SizedBox(height: 4),
             Row(
               children: [
@@ -289,7 +293,7 @@ class _CatalogFoodCard extends StatelessWidget {
   }
 }
 
-/// 🆕 Pantalla de detalle del plato
+/// 🆕 Pantalla de detalle del plato completamente corregida
 class FoodDetailScreen extends StatelessWidget {
   final Food food;
 
@@ -308,20 +312,22 @@ class FoodDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen grande
+            /// Imagen corregida → ahora usa imageBase64
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
-              child: AspectRatio(
-                aspectRatio: 16 / 9,
+              child: SizedBox(
+                height: 220,
+                width: double.infinity,
                 child: _buildFoodImage(
-                  food.imagen,
+                  food.imagenBase64,
                   fit: BoxFit.cover,
                 ),
               ),
             ),
+
             const SizedBox(height: 16),
 
-            // Rating + restaurantes
+            /// Rating + restaurante al que pertenece
             Row(
               children: [
                 const Icon(Icons.star, color: Colors.amber),
@@ -333,18 +339,41 @@ class FoodDetailScreen extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 20),
+
+                /// Mostrar nombre del restaurante (consulta Firestore)
                 const Icon(Icons.store_mall_directory, size: 20),
-                const SizedBox(width: 4),
-                Text(
-                  '${food.restaurantes} restaurantes',
-                  style: theme.textTheme.bodyMedium,
+                const SizedBox(width: 6),
+
+                StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('restaurants')
+                      .doc(food.restaurantId)
+                      .snapshots(),
+                  builder: (context, snap) {
+                    if (!snap.hasData || !snap.data!.exists) {
+                      return Text(
+                        "Restaurante no disponible",
+                        style: theme.textTheme.bodyMedium,
+                      );
+                    }
+
+                    final data =
+                        snap.data!.data() as Map<String, dynamic>? ?? {};
+                    final nombreRest = data['name'] ?? "Restaurante";
+
+                    return Text(
+                      nombreRest,
+                      style: theme.textTheme.bodyMedium,
+                    );
+                  },
                 ),
               ],
             ),
+
             const SizedBox(height: 16),
 
-            // Tipo de plato
+            /// Tipo del plato
             Chip(
               label: Text(food.tipo),
               backgroundColor: Colors.orange.shade100,
@@ -353,9 +382,10 @@ class FoodDetailScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             const SizedBox(height: 16),
 
-            // Descripción completa
+            /// Descripción
             if (food.descripcion != null && food.descripcion!.isNotEmpty)
               Text(
                 food.descripcion!,
@@ -364,8 +394,8 @@ class FoodDetailScreen extends StatelessWidget {
             else
               Text(
                 'Sin descripción disponible.',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: Colors.grey.shade600),
+                style: theme.textTheme.bodyMedium!
+                    .copyWith(color: Colors.grey.shade600),
               ),
 
             const SizedBox(height: 24),
