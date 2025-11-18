@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:food_point/data/services/auth_service.dart';
 import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
 import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -12,6 +13,8 @@ import 'package:food_point/ui/home/view_model/home_screen.dart';
 import 'widgets/catalogo_platos.dart';
 import 'package:food_point/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
 import 'package:food_point/ui/perfil_page/view_model/perfil_screen.dart';
+
+// auth
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,7 +46,10 @@ class MyApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      initialRoute: firebaseConnected ? '/login' : '/firebaseError',
+      home: firebaseConnected
+          ? const _AuthGate()
+          : const _FirebaseErrorScreen(),
+
       routes: {
         '/login': (context) =>
             LoginScreen(firebaseConnected: firebaseConnected),
@@ -64,6 +70,30 @@ class MyApp extends StatelessWidget {
           );
         }
         return null;
+      },
+    );
+  }
+}
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: AuthService.instance.authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (snapshot.hasData) {
+          return const HomeScreen(); // 🔥 Sesión activa → ir al inicio
+        }
+
+        return LoginScreen(firebaseConnected: true); // 🔥 No logueado → login
       },
     );
   }

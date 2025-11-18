@@ -5,13 +5,23 @@ import 'package:food_point/data/services/auth_service.dart';
 import 'package:food_point/ui/auth/view_model/registro_screen.dart';
 import 'package:food_point/ui/home/view_model/home_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   final bool firebaseConnected;
+
+  const LoginScreen({super.key, required this.firebaseConnected});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  bool _obscurePassword = true;
+
+  bool _isLoadingEmail = false;
+  bool _isLoadingGoogle = false;
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-
-  LoginScreen({super.key, required this.firebaseConnected});
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +52,7 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
+  // ---------- CABECERA -----------
   Widget _buildHeader(ThemeData theme) {
     return Column(
       children: [
@@ -77,19 +88,20 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
+  // ---------- TARJETA DE LOGIN -----------
   Widget _buildFormCard(BuildContext context, ThemeData theme) {
     return Card(
-      elevation: 3,
+      elevation: 5,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      color: theme.colorScheme.surface,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(25),
         child: Column(
           children: [
             Text(
               'Iniciar Sesión',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                fontSize: 22,
               ),
             ),
             const SizedBox(height: 20),
@@ -108,117 +120,188 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
+  // ---------- CAMPOS -----------
   Widget _buildEmailField() {
     return TextField(
       controller: emailController,
       decoration: const InputDecoration(
         labelText: 'Correo Electrónico',
-        hintText: 'tu@email.com',
+        prefixIcon: Icon(Icons.email),
       ),
+      keyboardType: TextInputType.emailAddress,
     );
   }
 
   Widget _buildPasswordField(ThemeData theme) {
     return TextField(
       controller: passwordController,
-      obscureText: true,
+      obscureText: _obscurePassword,
       decoration: InputDecoration(
         labelText: 'Contraseña',
-        hintText: 'Tu contraseña',
-        suffixIcon: Icon(Icons.visibility, color: theme.colorScheme.primary),
+        prefixIcon: const Icon(Icons.lock),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: theme.colorScheme.primary,
+          ),
+          onPressed: () {
+            setState(() {
+              _obscurePassword = !_obscurePassword;
+            });
+          },
+        ),
       ),
     );
   }
 
+  // ---------- BOTÓN LOGIN EMAIL -----------
   Widget _buildLoginButton(BuildContext context) {
     return SizedBox(
       width: double.infinity,
+      height: 48,
       child: ElevatedButton(
-        onPressed: () async {
-          final email = emailController.text.trim();
-          final password = passwordController.text.trim();
-
-          if (email.isEmpty || password.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Ingresa email y contraseña')),
-            );
-            return;
-          }
-
-          try {
-            final userCredential = await AuthService.instance.signInWithEmail(
-              email: email,
-              password: password,
-            );
-
-            if (userCredential.user != null) {
-              // Usuario autenticado correctamente
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => const HomeScreen()),
-              );
-            }
-          } on FirebaseAuthException catch (e) {
-            // Mostrar error de autenticación
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error: ${e.message}')));
-          } catch (e) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Error inesperado: $e')));
-          }
-        },
-        child: const Text('Iniciar Sesión'),
+        onPressed: _isLoadingEmail ? null : () => _loginWithEmail(context),
+        child: _isLoadingEmail
+            ? const CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              )
+            : const Text("Iniciar Sesión"),
       ),
     );
   }
 
+  Future<void> _loginWithEmail(BuildContext context) async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      _showError('Por favor ingresa tu correo y contraseña.');
+      return;
+    }
+
+    setState(() => _isLoadingEmail = true);
+
+    try {
+      final userCredential = await AuthService.instance.signInWithEmail(
+        email: email,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } on FirebaseAuthException catch (e) {
+      String message = "Ocurrió un error inesperado.";
+
+      switch (e.code) {
+        case "user-not-found":
+          message = "No existe una cuenta con este correo.";
+          break;
+        case "wrong-password":
+          message = "La contraseña es incorrecta.";
+          break;
+        case "invalid-email":
+          message = "El correo no es válido.";
+          break;
+        default:
+          message = "Credenciales inválidas.";
+          print("FirebaseAuthException: ${e.code} - ${e.message}");
+      }
+
+      _showError(message);
+    } finally {
+      if (mounted) setState(() => _isLoadingEmail = false);
+    }
+  }
+
+  // ---------- BOTÓN GOOGLE -----------
   Widget _buildGoogleButton(BuildContext context) {
-    return ElevatedButton.icon(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        minimumSize: const Size(double.infinity, 50),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-      icon: Image.asset('assets/img/google.png', height: 24, width: 24),
-      label: const Text('Continuar con Google', style: TextStyle(fontSize: 16)),
-      onPressed: () => _handleGoogleSignIn(context),
-    );
-  }
-
-  Widget _buildDemoButton(BuildContext context) {
     return SizedBox(
+      height: 50,
       width: double.infinity,
-      child: OutlinedButton.icon(
-        onPressed: () {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        },
-        icon: const Icon(Icons.person),
-        label: const Text('Probar con cuenta demo'),
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black87,
+        ),
+        icon: _isLoadingGoogle
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Image.asset('assets/img/google.png', height: 24),
+        label: Text(
+          _isLoadingGoogle ? "Conectando..." : "Continuar con Google",
+          style: const TextStyle(fontSize: 16),
+        ),
+        onPressed: _isLoadingGoogle ? null : () => _handleGoogleSignIn(context),
       ),
     );
   }
 
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    setState(() => _isLoadingGoogle = true);
+
+    try {
+      final userCredential = await AuthService.instance.signInWithGoogle();
+
+      if (userCredential == null) {
+        _showError("No se pudo completar el inicio de sesión con Google.");
+        return;
+      }
+
+      final user = userCredential.user;
+      if (user == null) return;
+
+      final userRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+
+      final doc = await userRef.get();
+
+      if (!doc.exists) {
+        await userRef.set({
+          'name': user.displayName ?? 'Sin nombre',
+          'email': user.email,
+          'photoUrl': user.photoURL,
+          'phoneNumber': user.phoneNumber,
+          'role': 'owner',
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const HomeScreen()),
+      );
+    } catch (e) {
+      _showError("Error al conectar con Google.");
+    } finally {
+      if (mounted) setState(() => _isLoadingGoogle = false);
+    }
+  }
+
+  // ---------- REGISTRO -----------
   Widget _buildRegisterRow(BuildContext context, ThemeData theme) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text('¿No tienes cuenta? ', style: theme.textTheme.bodyMedium),
+        const Text("¿No tienes cuenta? "),
         GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => RegisterScreen()),
-            );
-          },
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => RegisterScreen()),
+          ),
           child: Text(
-            'Regístrate aquí',
-            style: theme.textTheme.bodyMedium?.copyWith(
+            "Regístrate aquí",
+            style: TextStyle(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.bold,
             ),
@@ -228,46 +311,48 @@ class LoginScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _handleGoogleSignIn(BuildContext context) async {
-    try {
-      final userCredential = await AuthService.instance.signInWithGoogle();
+  // ---------- SNACKBAR DE ERRORES -----------
+  void _showError(String message) {
+    if (!mounted) return;
 
-      if (userCredential != null) {
-        final user = userCredential.user;
-        print("Usuario logueado: $user");
-
-        if (user != null) {
-          final userRef = FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid);
-
-          final doc = await userRef.get();
-
-          // Guardar usuario la primera vez
-          if (!doc.exists) {
-            await userRef.set({
-              'name': user.displayName ?? 'Sin nombre',
-              'email': user.email,
-              'photoUrl': user.photoURL,
-              'phoneNumber': user.phoneNumber,
-              'role': 'owner',
-              'createdAt': FieldValue.serverTimestamp(),
-            });
-            print("Usuario guardado en Firestore");
-          }
-
-          // Redirigir a RestaurantesPage
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
-        }
-      } else {
-        print("Inicio de sesión cancelado");
-      }
-    } catch (e) {
-      print("Error en login con Google: $e");
-      // Opcional: mostrar snackbar o alerta
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        duration: const Duration(seconds: 3),
+        content: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.red.shade600,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.shade200.withOpacity(0.4),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.white, size: 26),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  message,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
