@@ -1,25 +1,18 @@
 import 'package:flutter/material.dart';
 
-class RegisterForm extends StatefulWidget {
-  const RegisterForm({super.key});
+class RegisterForm extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nombreController;
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
 
-  @override
-  State<RegisterForm> createState() => _RegisterFormState();
-}
-
-class _RegisterFormState extends State<RegisterForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _nombreController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  @override
-  void dispose() {
-    _nombreController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
+  const RegisterForm({
+    super.key,
+    required this.formKey,
+    required this.nombreController,
+    required this.emailController,
+    required this.passwordController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,18 +31,18 @@ class _RegisterFormState extends State<RegisterForm> {
     }
 
     return Form(
-      key: _formKey,
+      key: formKey,
       child: Column(
         children: [
           TextFormField(
-            controller: _nombreController,
+            controller: nombreController,
             decoration: _inputDecoration('Nombre completo', Icons.person),
             validator: (v) =>
                 v == null || v.isEmpty ? 'Ingrese su nombre' : null,
           ),
           const SizedBox(height: 16),
           TextFormField(
-            controller: _emailController,
+            controller: emailController,
             decoration: _inputDecoration('Correo electrónico', Icons.email),
             keyboardType: TextInputType.emailAddress,
             validator: (v) =>
@@ -57,7 +50,7 @@ class _RegisterFormState extends State<RegisterForm> {
           ),
           const SizedBox(height: 16),
           TextFormField(
-            controller: _passwordController,
+            controller: passwordController,
             decoration: _inputDecoration('Contraseña', Icons.lock),
             obscureText: true,
             validator: (v) =>

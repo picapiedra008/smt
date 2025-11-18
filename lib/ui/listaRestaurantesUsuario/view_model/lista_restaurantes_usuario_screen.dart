@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:food_point/data/services/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
@@ -41,9 +42,6 @@ class Restaurante {
 class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
   final TextEditingController searchController = TextEditingController();
   final FirebaseFirestore db = FirebaseFirestore.instance;
-  
-  // User ID estático por el momento
-  final String userId = "user1";
 
   List<Restaurante> restaurantes = [];
   bool _isLoading = true;
@@ -57,17 +55,24 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
 
   Future<void> _loadRestaurantes() async {
     try {
+      final user = AuthService.instance.currentUser;
+      if (user == null) {
+        // No hay usuario logueado: redirige al login
+        Navigator.pushReplacementNamed(context, '/login');
+        return;
+      }
+      final userId = user.uid;
       // Filtrar restaurantes por user_id
       QuerySnapshot snapshot = await db
           .collection('restaurants')
           .where('user_id', isEqualTo: userId)
           .get();
-      
+
       List<Restaurante> loadedRestaurantes = [];
-      
+
       for (var doc in snapshot.docs) {
         var data = doc.data() as Map<String, dynamic>;
-        
+
         // Construir el horario desde openingTime y closingTime
         String horario = 'Horario no disponible';
         if (data['openingTime'] != null && data['closingTime'] != null) {
@@ -77,21 +82,23 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
         } else if (data['closingTime'] != null) {
           horario = 'Hasta ${data['closingTime']}';
         }
-        
+
         // Calificación por defecto si no existe
         double calificacion = data['calificacion']?.toDouble() ?? 4.0;
-        
-        loadedRestaurantes.add(Restaurante(
-          id: doc.id,
-          nombre: data['name'] ?? 'Sin nombre',
-          descripcion: data['description'] ?? 'Sin descripción',
-          horario: horario,
-          calificacion: calificacion,
-          logoBase64: data['logoBase64'],
-          destacado: data['destacado'] ?? false,
-          userId: data['userId'] ?? '',
-          visibility: data['visibility'] ?? 'public',
-        ));
+
+        loadedRestaurantes.add(
+          Restaurante(
+            id: doc.id,
+            nombre: data['name'] ?? 'Sin nombre',
+            descripcion: data['description'] ?? 'Sin descripción',
+            horario: horario,
+            calificacion: calificacion,
+            logoBase64: data['logoBase64'],
+            destacado: data['destacado'] ?? false,
+            userId: data['userId'] ?? '',
+            visibility: data['visibility'] ?? 'public',
+          ),
+        );
       }
 
       setState(() {
@@ -106,23 +113,13 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
     }
   }
 
-
-
-
   void _editarRestaurante(String restauranteId) {
-    Navigator.pushNamed(
-      context, 
-      '/perfil/restaurantes/edit/$restauranteId'
-    );
+    Navigator.pushNamed(context, '/perfil/restaurantes/edit/$restauranteId');
   }
 
   void _agregarRestaurante() {
-    Navigator.pushNamed(
-      context, 
-      '/perfil/restaurantes/create'
-    );
+    Navigator.pushNamed(context, '/perfil/restaurantes/create');
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +138,6 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-
             Navigator.pop(context);
           },
         ),
@@ -165,7 +161,10 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                       padding: const EdgeInsets.all(12),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline, color: Color(0xFFFF6A00)),
+                          const Icon(
+                            Icons.info_outline,
+                            color: Color(0xFFFF6A00),
+                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Text(
@@ -181,10 +180,13 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                     ),
                   ),
                 ),
-                
+
                 // Barra de búsqueda
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: TextField(
                     controller: searchController,
                     decoration: InputDecoration(
@@ -192,7 +194,9 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                       hintText: 'Buscar en mis restaurantes...',
                       filled: true,
                       fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(
@@ -204,15 +208,18 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                     onChanged: (val) => setState(() => searchText = val),
                   ),
                 ),
-                
+
                 const SizedBox(height: 4),
-                
+
                 // Lista de restaurantes
                 Expanded(
                   child: filteredList.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
                           itemCount: filteredList.length,
                           itemBuilder: (context, index) {
                             final r = filteredList[index];
@@ -230,11 +237,7 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.restaurant,
-            size: 80,
-            color: Colors.grey,
-          ),
+          const Icon(Icons.restaurant, size: 80, color: Colors.grey),
           const SizedBox(height: 16),
           const Text(
             "No tienes restaurantes",
@@ -307,7 +310,9 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: r.visibility == 'publico' ? Colors.green : Colors.blueGrey,
+                      color: r.visibility == 'publico'
+                          ? Colors.green
+                          : Colors.blueGrey,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -316,7 +321,6 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                     ),
                   ),
                 ),
-                
               ],
             ),
             const SizedBox(height: 8),
@@ -344,7 +348,7 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 10),
-            
+
             // Botones de acción
             Row(
               children: [
@@ -363,7 +367,6 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                
               ],
             ),
           ],
@@ -374,11 +377,7 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
 
   Widget _buildPlaceholderIcon() {
     return const Center(
-      child: Icon(
-        Icons.restaurant,
-        size: 60,
-        color: Colors.grey,
-      ),
+      child: Icon(Icons.restaurant, size: 60, color: Colors.grey),
     );
   }
 
