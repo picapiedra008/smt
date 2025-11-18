@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
 import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
 import 'package:food_point/ui/core/themes/app_theme.dart';
 import 'package:food_point/ui/auth/view_model/login_screen.dart';
@@ -20,6 +21,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await GoogleSignIn.instance.initialize();
     firebaseConnected = true;
   } catch (e) {
     firebaseConnected = false;
@@ -41,9 +43,10 @@ class MyApp extends StatelessWidget {
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      initialRoute: firebaseConnected ? '/inicio' : '/firebaseError',
+      initialRoute: firebaseConnected ? '/login' : '/firebaseError',
       routes: {
-        '/login': (context) => LoginScreen(firebaseConnected: firebaseConnected),
+        '/login': (context) =>
+            LoginScreen(firebaseConnected: firebaseConnected),
         '/inicio': (context) => const HomeScreen(),
         '/catalogo': (context) => const DishCatalogPage(),
         '/restaurantes': (context) => const SaboresApp(),

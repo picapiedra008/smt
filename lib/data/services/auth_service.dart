@@ -1,18 +1,49 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-/// Lightweight wrapper around FirebaseAuth for common operations.
-/// Assumes Firebase.initializeApp() is called in `main()` before use.
 class AuthService {
   AuthService._();
   static final AuthService instance = AuthService._();
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  User? get currentUser => _auth.currentUser;
+  /// Singleton de GoogleSignIn
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
 
+  User? get currentUser => _auth.currentUser;
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
+  /// Login con Google
+
+  Future<UserCredential?> signInWithGoogle() async {
+    await GoogleSignIn.instance.initialize();
+
+    // Trigger the authentication flow
+    final GoogleSignInAccount googleUser = await GoogleSignIn.instance
+        .authenticate();
+
+    if (googleUser == null) {
+      return null;
+    }
+    // Obtain the auth details from the request
+    final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+    // Create a new credential
+    final credential = GoogleAuthProvider.credential(
+      idToken: googleAuth.idToken,
+    );
+
+    // Once signed in, return the UserCredential
+    return await FirebaseAuth.instance.signInWithCredential(credential);
+  }
+
+  /// Logout
+  Future<void> signOut() async {
+    await _googleSignIn.signOut();
+    await _auth.signOut();
+  }
+
+  /// Email/password login
   Future<UserCredential> signInWithEmail({
     required String email,
     required String password,
@@ -23,6 +54,7 @@ class AuthService {
     );
   }
 
+  /// Crear usuario con email/password
   Future<UserCredential> createUserWithEmail({
     required String email,
     required String password,
@@ -31,22 +63,5 @@ class AuthService {
       email: email,
       password: password,
     );
-  }
-
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
-
-  /// Optional helper to ensure Firebase is initialized before using AuthService.
-  static Future<void> ensureInitialized() async {
-    try {
-      // If Firebase has already been initialized this returns immediately.
-      if (Firebase.apps.isEmpty) {
-        await Firebase.initializeApp();
-      }
-    } catch (_) {
-      // Rethrow to allow app to handle initialization errors if needed.
-      rethrow;
-    }
   }
 }
