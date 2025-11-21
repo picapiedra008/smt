@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:food_point/domain/models/food.dart';
+import 'package:food_point/models/restaurant.dart';
 import 'package:food_point/widgets/bottom_nav_var.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -38,7 +39,7 @@ class HomeScreen extends StatelessWidget {
           final docs = snapshot.data!.docs;
           final foods = docs.map((d) => Food.fromFirestore(d)).toList();
 
-          // 🔥 Plato del día aleatorio pero estable por día
+          // Plato del día aleatorio pero estable por día
           final now = DateTime.now();
           final seed = now.year * 10000 + now.month * 100 + now.day;
           final random = Random(seed);
@@ -60,12 +61,10 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // 🟥 Carta del "Plato del Día"
                 _FeaturedFoodCard(food: featured),
 
                 const SizedBox(height: 20),
 
-                // Buscador (solo vista por ahora)
                 TextField(
                   decoration: InputDecoration(
                     hintText: 'Buscar platos...',
@@ -92,10 +91,8 @@ class HomeScreen extends StatelessWidget {
                       .map((food) => _CatalogFoodCard(food: food))
                       .toList(),
                 ),
-                
               ],
             ),
-            
           );
         },
       ),
@@ -129,19 +126,17 @@ class _FeaturedFoodCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Imagen + etiqueta
             Stack(
               children: [
                 SizedBox(
                   height: 190,
                   width: double.infinity,
                   child: _buildFoodImage(
-  food.imagenBase64,
-  width: double.infinity,
-  height: 190,
-  fit: BoxFit.cover,
-),
-
+                    food.imagenBase64,
+                    width: double.infinity,
+                    height: 190,
+                    fit: BoxFit.cover,
+                  ),
                 ),
                 Positioned(
                   top: 12,
@@ -194,7 +189,6 @@ class _FeaturedFoodCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         '1 restaurante',
-
                         style: TextStyle(
                           color: Colors.grey.shade700,
                           fontSize: 12,
@@ -218,7 +212,6 @@ class _FeaturedFoodCard extends StatelessWidget {
           ],
         ),
       ),
-      
     );
   }
 }
@@ -239,12 +232,11 @@ class _CatalogFoodCard extends StatelessWidget {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(10),
           child: _buildFoodImage(
-  food.imagenBase64,
-  width: 70,
-  height: 70,
-  fit: BoxFit.cover,
-),
-
+            food.imagenBase64,
+            width: 70,
+            height: 70,
+            fit: BoxFit.cover,
+          ),
         ),
         title: Text(
           food.nombre,
@@ -258,7 +250,6 @@ class _CatalogFoodCard extends StatelessWidget {
           children: [
             const SizedBox(height: 4),
             const Text('1 restaurante'),
-
             const SizedBox(height: 4),
             Row(
               children: [
@@ -293,7 +284,7 @@ class _CatalogFoodCard extends StatelessWidget {
   }
 }
 
-/// 🆕 Pantalla de detalle del plato completamente corregida
+/// ------------ DETALLE DEL PLATO + LISTA DE RESTAURANTES ------------
 class FoodDetailScreen extends StatelessWidget {
   final Food food;
 
@@ -312,7 +303,7 @@ class FoodDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// Imagen corregida → ahora usa imageBase64
+            // Imagen grande
             ClipRRect(
               borderRadius: BorderRadius.circular(18),
               child: SizedBox(
@@ -327,7 +318,7 @@ class FoodDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            /// Rating + restaurante al que pertenece
+            // Rating + restaurante propietario
             Row(
               children: [
                 const Icon(Icons.star, color: Colors.amber),
@@ -341,7 +332,6 @@ class FoodDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 20),
 
-                /// Mostrar nombre del restaurante (consulta Firestore)
                 const Icon(Icons.store_mall_directory, size: 20),
                 const SizedBox(width: 6),
 
@@ -360,7 +350,7 @@ class FoodDetailScreen extends StatelessWidget {
 
                     final data =
                         snap.data!.data() as Map<String, dynamic>? ?? {};
-                    final nombreRest = data['name'] ?? "Restaurante";
+                    final nombreRest = data['name'] ?? data['nombre'] ?? "Restaurante";
 
                     return Text(
                       nombreRest,
@@ -373,7 +363,7 @@ class FoodDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            /// Tipo del plato
+            // Tipo
             Chip(
               label: Text(food.tipo),
               backgroundColor: Colors.orange.shade100,
@@ -385,7 +375,7 @@ class FoodDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            /// Descripción
+            // Descripción
             if (food.descripcion != null && food.descripcion!.isNotEmpty)
               Text(
                 food.descripcion!,
@@ -399,6 +389,53 @@ class FoodDetailScreen extends StatelessWidget {
               ),
 
             const SizedBox(height: 24),
+
+            // ---------- NUEVA SECCIÓN: LISTA DE RESTAURANTES ----------
+            Row(
+              children: [
+                const Icon(Icons.store_mall_directory_outlined,
+                    color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Restaurantes que ofrecen este plato',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            FutureBuilder<List<Restaurant>>(
+              future: _fetchRestaurantsByFoodName(food.nombre),
+              builder: (context, snap) {
+                if (snap.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                if (snap.hasError) {
+                  return Text(
+                    'Error al cargar restaurantes: ${snap.error}',
+                    style: theme.textTheme.bodyMedium,
+                  );
+                }
+
+                final rs = snap.data ?? [];
+                if (rs.isEmpty) {
+                  return Text(
+                    'Aún no hay otros restaurantes que ofrezcan este plato.',
+                    style: theme.textTheme.bodyMedium,
+                  );
+                }
+
+                return Column(
+                  children: rs
+                      .map((r) => _RestaurantCard(restaurant: r))
+                      .toList(),
+                );
+              },
+            ),
           ],
         ),
       ),
@@ -406,8 +443,97 @@ class FoodDetailScreen extends StatelessWidget {
   }
 }
 
-/// ------------ Helpers para imagen (Base64 o URL) ------------
+/// ------------ CARD PARA CADA RESTAURANTE ------------
+class _RestaurantCard extends StatelessWidget {
+  final Restaurant restaurant;
 
+  const _RestaurantCard({required this.restaurant});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.grey.shade900,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // TODO: aquí luego puedes navegar al detalle del restaurante
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              // Imagen del restaurante
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: _buildRestaurantLogo(
+                  restaurant.logoBase64,
+                  width: 60,
+                  height: 60,
+                ),
+              ),
+              const SizedBox(width: 12),
+
+              // Nombre + descripción (recortada)
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      restaurant.nombre,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    if (restaurant.descripcion != null &&
+                        restaurant.descripcion!.isNotEmpty)
+                      Text(
+                        restaurant.descripcion!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
+              // Rating a la derecha
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 18),
+                      const SizedBox(width: 4),
+                      Text(
+                        restaurant.rating.toStringAsFixed(1),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+/// ------------ Helpers de imagen (Base64 o URL) ------------
 Widget _buildFoodImage(
   String imagen, {
   double? width,
@@ -418,18 +544,13 @@ Widget _buildFoodImage(
     return _foodImagePlaceholder(width, height);
   }
 
-  // 1) Intentar como Base64
   try {
     String base64String = imagen;
-
-    // Si viene como 'data:image/png;base64,AAAA...'
     if (base64String.startsWith('data:image')) {
       base64String = base64String.split(',').last;
     }
-
     base64String = base64String.trim();
 
-    // Ajustar padding (longitud múltiplo de 4)
     final remainder = base64String.length % 4;
     if (remainder != 0) {
       base64String =
@@ -448,7 +569,6 @@ Widget _buildFoodImage(
     debugPrint('No es Base64 válido o falló decode: $e');
   }
 
-  // 2) Si no era Base64, probar como URL normal
   return Image.network(
     imagen,
     width: width,
@@ -473,4 +593,83 @@ Widget _foodImagePlaceholder(double? width, double? height) {
       size: 40,
     ),
   );
+}
+
+Widget _buildRestaurantLogo(
+  String? logoBase64, {
+  double? width,
+  double? height,
+}) {
+  if (logoBase64 == null || logoBase64.isEmpty) {
+    return _foodImagePlaceholder(width, height);
+  }
+  // Reutilizamos la misma lógica de _buildFoodImage:
+  return _buildFoodImage(
+    logoBase64,
+    width: width,
+    height: height,
+    fit: BoxFit.cover,
+  );
+}
+
+/// ------------ LÓGICA PARA BUSCAR RESTAURANTES POR NOMBRE DE PLATO ------------
+/// Busca todos los foods cuyo nombre (name/nombre) CONTENGA [foodName],
+/// sin importar mayúsculas ni acentos, y devuelve la lista de restaurantes.
+Future<List<Restaurant>> _fetchRestaurantsByFoodName(String foodName) async {
+  final db = FirebaseFirestore.instance;
+  final searchNorm = _normalizeText(foodName);
+
+  final foodsSnap = await db.collection('foods').get();
+
+  final filteredFoods = foodsSnap.docs.where((doc) {
+    final data = doc.data() as Map<String, dynamic>;
+    final rawName =
+        (data['name'] ?? data['nombre'] ?? '').toString();
+    final nameNorm = _normalizeText(rawName);
+    return nameNorm.contains(searchNorm);
+  }).toList();
+
+  if (filteredFoods.isEmpty) return [];
+
+  final ids = filteredFoods
+      .map((d) => (d.data()['restaurantId'] ?? '') as String)
+      .where((id) => id.isNotEmpty)
+      .toSet()
+      .toList();
+
+  if (ids.isEmpty) return [];
+
+  final List<Restaurant> restaurantes = [];
+  const chunkSize = 10;
+
+  for (var i = 0; i < ids.length; i += chunkSize) {
+    final chunk = ids.sublist(
+      i,
+      i + chunkSize > ids.length ? ids.length : i + chunkSize,
+    );
+
+    final rsSnap = await db
+        .collection('restaurants')
+        .where(FieldPath.documentId, whereIn: chunk)
+        .get();
+
+    restaurantes.addAll(
+      rsSnap.docs.map((doc) => Restaurant.fromFirestore(doc)).toList(),
+    );
+  }
+
+  return restaurantes;
+}
+
+String _normalizeText(String input) {
+  var s = input.toLowerCase();
+
+  const accents = 'áàäâãéèëêíìïîóòöôõúùüûñ';
+  const normal  = 'aaaaaeeeeiiiiooooouuuun';
+
+  for (var i = 0; i < accents.length; i++) {
+    s = s.replaceAll(accents[i], normal[i]);
+  }
+
+  return s;
 }
