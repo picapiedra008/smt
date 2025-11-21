@@ -62,10 +62,11 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
         return;
       }
       final userId = user.uid;
+      print(userId);
       // Filtrar restaurantes por user_id
       QuerySnapshot snapshot = await db
           .collection('restaurants')
-          .where('user_id', isEqualTo: userId)
+          .where('userId', isEqualTo: userId)
           .get();
 
       List<Restaurante> loadedRestaurantes = [];

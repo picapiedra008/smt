@@ -27,25 +27,32 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildHeader(theme),
-              const SizedBox(height: 30),
-              _buildFormCard(context, theme),
-              const SizedBox(height: 20),
-              Text(
-                '🌿 Tradición culinaria del valle cochabambino 🌿',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onBackground.withOpacity(0.6),
+    return WillPopScope(
+      onWillPop: () async {
+        // Redirigir a la ruta /inicio cuando se presione el botón de atrás
+        Navigator.pushReplacementNamed(context, '/perfil');
+        return false; // Evita el comportamiento por defecto (salir de la app)
+      },
+      child: Scaffold(
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 50),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildHeader(theme),
+                const SizedBox(height: 30),
+                _buildFormCard(context, theme),
+                const SizedBox(height: 20),
+                Text(
+                  '🌿 Tradición culinaria del valle cochabambino 🌿',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onBackground.withOpacity(0.6),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
