@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:food_point/data/services/auth_service.dart';
+import 'package:food_point/ui/auth/view_model/registro_screen.dart';
 import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
 import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -54,6 +55,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) =>
             LoginScreen(firebaseConnected: firebaseConnected),
         '/inicio': (context) => const HomeScreen(),
+        '/registro': (context) => const RegisterScreen(),
         '/catalogo': (context) => const DishCatalogPage(),
         '/restaurantes': (context) => const SaboresApp(),
         '/perfil': (context) => PerfilPage(),
@@ -89,11 +91,11 @@ class _AuthGate extends StatelessWidget {
           );
         }
 
-        if (snapshot.hasData) {
+        //if (snapshot.hasData) {
           return const HomeScreen(); // 🔥 Sesión activa → ir al inicio
-        }
+        //}
 
-        return LoginScreen(firebaseConnected: true); // 🔥 No logueado → login
+        //return LoginScreen(firebaseConnected: true); // 🔥 No logueado → login
       },
     );
   }
