@@ -28,31 +28,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const RegisterHeader(),
-                const SizedBox(height: 32),
-                RegisterForm(
-                  formKey: _formKey,
-                  nombreController: _nombreController,
-                  emailController: _emailController,
-                  passwordController: _passwordController,
-                ),
-                const SizedBox(height: 24),
-                RegisterButton(
-                  formKey: _formKey,
-                  nombreController: _nombreController,
-                  emailController: _emailController,
-                  passwordController: _passwordController,
-                ),
-              ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Redirigir a la ruta /perfil cuando se presione el botón de atrás
+        Navigator.pushReplacementNamed(context, '/perfil');
+        return false; // Evita el comportamiento por defecto
+      },
+      child: Scaffold(
+        backgroundColor: theme.colorScheme.background,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const RegisterHeader(),
+                  const SizedBox(height: 32),
+                  RegisterForm(
+                    formKey: _formKey,
+                    nombreController: _nombreController,
+                    emailController: _emailController,
+                    passwordController: _passwordController,
+                  ),
+                  const SizedBox(height: 24),
+                  RegisterButton(
+                    formKey: _formKey,
+                    nombreController: _nombreController,
+                    emailController: _emailController,
+                    passwordController: _passwordController,
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -8,9 +8,10 @@ import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaura
 
 class PerfilPage extends StatelessWidget {
   PerfilPage({super.key});
-  Future<Map<String, dynamic>> _getUsuario() async {
+  
+  Future<Map<String, dynamic>?> _getUsuario() async {
     final user = AuthService.instance.currentUser;
-    if (user == null) throw Exception("No hay usuario autenticado");
+    if (user == null) return null; // Retorna null en lugar de lanzar excepción
 
     final doc = await FirebaseFirestore.instance
         .collection('users')
@@ -52,20 +53,125 @@ class PerfilPage extends StatelessWidget {
   final List<Color> avatarColors = [
     Colors.blue,
     Colors.green,
-
     Colors.purple,
     Colors.teal,
     Colors.indigo,
     Colors.brown,
   ];
+  
   Color getColorFromName(String name) {
     final index = name.codeUnitAt(0) % avatarColors.length;
     return avatarColors[index];
   }
 
+// Widget para mostrar cuando no hay usuario logueado
+Widget _buildNoUserScreen(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text("Mi Perfil"), 
+      centerTitle: true
+    ),
+    bottomNavigationBar: const CustomBottomNav(selectedIndex: 1),
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Icono
+            Icon(
+              Icons.person_outline,
+              size: 80,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 24),
+            // Mensaje
+            Text(
+              "No estás logueado",
+              style: GoogleFonts.poppins(
+                fontSize: 24,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Inicia sesión para acceder a tu perfil y gestionar tu información",
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            // Botón de iniciar sesión
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (route) => false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFFF6A00),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  "Iniciar Sesión",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Botón secundario de registrarse
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/registro',
+                    (route) => false,
+                  );
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFFFF6A00),
+                  side: const BorderSide(color: Color(0xFFFF6A00)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  "Crear Cuenta",
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Map<String, dynamic>>(
+    return FutureBuilder<Map<String, dynamic>?>(
       future: _getUsuario(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -73,10 +179,10 @@ class PerfilPage extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(child: Text("Error: ${snapshot.error}")),
-          );
+
+        // Si no hay usuario (retornó null) o hay error
+        if (snapshot.data == null) {
+          return _buildNoUserScreen(context);
         }
 
         final usuario = snapshot.data!;
@@ -88,9 +194,10 @@ class PerfilPage extends StatelessWidget {
             : authPhoto;
         final name = usuario['nombre'] ?? 'U';
         final bgColor = getColorFromName(name);
+        
         return Scaffold(
           appBar: AppBar(title: const Text("Mi Perfil"), centerTitle: true),
-          bottomNavigationBar: const CustomBottomNav(selectedIndex: 3),
+          bottomNavigationBar: const CustomBottomNav(selectedIndex: 1),
           body: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
