@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:food_point/domain/models/food.dart';
 import 'package:food_point/models/restaurant.dart';
 import 'package:food_point/widgets/bottom_nav_var.dart';
+import 'package:food_point/ui/home/view_model/restaurant_detail_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -483,9 +484,14 @@ class _RestaurantCard extends StatelessWidget {
       color: Colors.grey.shade900,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          // TODO: aquí luego puedes navegar al detalle del restaurante
-        },
+       onTap: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => RestaurantDetailScreen(restaurant: restaurant),
+    ),
+  );
+},
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(

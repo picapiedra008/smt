@@ -380,7 +380,7 @@ class _RestaurantCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(r.direccion, style: const TextStyle(color: Colors.black54)),
+          Text(r.location, style: const TextStyle(color: Colors.black54)),
           const SizedBox(height: 8),
           Row(
             children: [
