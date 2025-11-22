@@ -643,30 +643,56 @@ Widget _buildRestaurantLogo(
 /// sin importar mayúsculas ni acentos, y devuelve la lista de restaurantes.
 Future<List<Restaurant>> _fetchRestaurantsByFoodName(String foodName) async {
   final db = FirebaseFirestore.instance;
+
+  // normalizar el nombre para búsqueda (sin mayúsculas ni acentos)
   final searchNorm = _normalizeText(foodName);
 
+  // 0=domingo, 6=sábado (coincide con tu arreglo days[])
+  final todayIndex = DateTime.now().weekday % 7;
+  final now = DateTime.now();
+  final nowMinutes = now.hour * 60 + now.minute;
+
+  // 1) Obtener TODOS los foods
   final foodsSnap = await db.collection('foods').get();
 
-  final filteredFoods = foodsSnap.docs.where((doc) {
+  // 2) Filtrar foods que coinciden en nombre Y cumplen reglas del plato
+  final Set<String> restaurantIds = {};
+
+  for (final doc in foodsSnap.docs) {
     final data = doc.data() as Map<String, dynamic>;
-    final rawName =
-        (data['name'] ?? data['nombre'] ?? '').toString();
+
+    // nombre
+    final rawName = (data['name'] ?? data['nombre'] ?? '').toString();
     final nameNorm = _normalizeText(rawName);
-    return nameNorm.contains(searchNorm);
-  }).toList();
+    if (!nameNorm.contains(searchNorm)) continue;
 
-  if (filteredFoods.isEmpty) return [];
+    // visibility del plato
+    final dishVisibility =
+        (data['visibility'] ?? data['visibilidad'] ?? 'publico')
+            .toString()
+            .toLowerCase();
+    if (dishVisibility == 'oculto') continue;
 
-  final ids = filteredFoods
-      .map((d) => (d.data()['restaurantId'] ?? '') as String)
-      .where((id) => id.isNotEmpty)
-      .toSet()
-      .toList();
+    // días del plato
+    final dishDays = data['days'];
+    if (dishDays != null && dishDays is List) {
+      if (todayIndex < 0 || todayIndex >= dishDays.length) continue;
+      if (dishDays[todayIndex] == false) continue;
+    }
 
-  if (ids.isEmpty) return [];
+    // restaurante asociado
+    final restaurantId = data['restaurantId'] as String?;
+    if (restaurantId == null || restaurantId.isEmpty) continue;
 
+    restaurantIds.add(restaurantId);
+  }
+
+  if (restaurantIds.isEmpty) return [];
+
+  // 3) Traer restaurantes por lotes (whereIn máx. 10 IDs)
   final List<Restaurant> restaurantes = [];
   const chunkSize = 10;
+  final ids = restaurantIds.toList();
 
   for (var i = 0; i < ids.length; i += chunkSize) {
     final chunk = ids.sublist(
@@ -679,9 +705,58 @@ Future<List<Restaurant>> _fetchRestaurantsByFoodName(String foodName) async {
         .where(FieldPath.documentId, whereIn: chunk)
         .get();
 
-    restaurantes.addAll(
-      rsSnap.docs.map((doc) => Restaurant.fromFirestore(doc)).toList(),
-    );
+    for (final rDoc in rsSnap.docs) {
+      final rData = rDoc.data() as Map<String, dynamic>? ?? {};
+
+      // ---- visibility del restaurante ----
+      final restVisibility =
+          (rData['visibility'] ?? rData['visibilidad'] ?? 'publico')
+              .toString()
+              .toLowerCase();
+      if (restVisibility == 'oculto') continue;
+
+      // ---- estructura de horario / días (campo "0" u openingHours) ----
+      Map<String, dynamic>? schedule;
+
+      if (rData['openingHours'] is List &&
+          (rData['openingHours'] as List).isNotEmpty) {
+        final first = (rData['openingHours'] as List).first;
+        if (first is Map<String, dynamic>) schedule = first;
+      } else if (rData['openingHours'] is Map<String, dynamic>) {
+        final first = (rData['openingHours'] as Map<String, dynamic>)['0'];
+        if (first is Map<String, dynamic>) schedule = first;
+      } else if (rData['0'] is Map<String, dynamic>) {
+        // <- tu caso actual
+        schedule = rData['0'] as Map<String, dynamic>;
+      }
+
+      if (schedule != null) {
+        // días del restaurante
+        final rDays = schedule['days'] as List<dynamic>?;
+        if (rDays != null) {
+          if (todayIndex < 0 || todayIndex >= rDays.length) continue;
+          if (rDays[todayIndex] == false) continue;
+        }
+
+        // horario del restaurante
+        final openingStr = schedule['openingTime'] as String?;
+        final closingStr = schedule['closingTime'] as String?;
+
+        if (openingStr != null && closingStr != null) {
+          final openMinutes = _timeStringToMinutes(openingStr);
+          final closeMinutes = _timeStringToMinutes(closingStr);
+
+          if (openMinutes != null && closeMinutes != null) {
+            final isOpenNow =
+                nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
+            if (!isOpenNow) continue;
+          }
+        }
+      }
+
+      // si pasó todos los filtros, se agrega a la lista
+      restaurantes.add(Restaurant.fromFirestore(rDoc));
+    }
   }
 
   return restaurantes;
@@ -701,37 +776,50 @@ String _normalizeText(String input) {
 }
 
 /// Filtra los platos para el día de hoy considerando:
+/// - visibility del plato (publico/oculto)
 /// - days[] del plato
-/// - openingHours[0].days[] del restaurante (si está cerrado hoy, no se muestran sus platos)
+/// - visibility del restaurante
+/// - 0.days[] del restaurante
+/// - horario (0.openingTime - 0.closingTime) del restaurante
 Future<List<Food>> _filterFoodsForToday(
     List<QueryDocumentSnapshot> docs) async {
   final db = FirebaseFirestore.instance;
 
   // DateTime.weekday: 1 = lunes ... 7 = domingo
-  final todayIndex = DateTime.now().weekday - 1; // 0 = lunes, 6 = domingo
+  final todayIndex = DateTime.now().weekday % 7; // // 0=domingo, 6=sábado
+  final now = DateTime.now();
+  final nowMinutes = now.hour * 60 + now.minute;
 
   final List<Food> result = [];
 
   for (final d in docs) {
     final data = d.data() as Map<String, dynamic>;
 
-    // ---------- 1) FILTRO POR DIAS DEL PLATO ----------
+    // ---------- 0) VISIBILIDAD DEL PLATO ----------
+    final dishVisibility =
+        (data['visibility'] ?? data['visibilidad'] ?? 'publico')
+            .toString()
+            .toLowerCase();
+
+    if (dishVisibility == 'oculto') {
+      // plato marcado como oculto -> no se muestra
+      continue;
+    }
+
+    // ---------- 1) DIAS DEL PLATO ----------
     final dishDays = data['days'];
     if (dishDays != null && dishDays is List) {
       if (todayIndex < 0 || todayIndex >= dishDays.length) {
-        // índice fuera de rango -> descartamos
         continue;
       }
       if (dishDays[todayIndex] == false) {
-        // plato no disponible hoy
-        continue;
+        continue; // plato no disponible hoy
       }
     }
 
-    // ---------- 2) FILTRO POR DIAS DEL RESTAURANTE ----------
+    // ---------- 2) DATOS DEL RESTAURANTE ----------
     final restaurantId = data['restaurantId'] as String?;
     if (restaurantId == null || restaurantId.isEmpty) {
-      // sin restaurante asociado -> descartamos
       continue;
     }
 
@@ -741,37 +829,87 @@ Future<List<Food>> _filterFoodsForToday(
 
     final rData = rSnap.data() as Map<String, dynamic>? ?? {};
 
-    // En tu Firestore: openingHours[0].days[0..6]
-    List<dynamic>? rDays;
+    // 2.a) visibilidad del restaurante
+    final restVisibility =
+        (rData['visibility'] ?? rData['visibilidad'] ?? 'publico')
+            .toString()
+            .toLowerCase();
 
-    final openingHours = rData['openingHours'];
+    if (restVisibility == 'oculto') {
+      // restaurante oculto -> no se muestra ningún plato suyo
+      continue;
+    }
 
-    if (openingHours is List && openingHours.isNotEmpty) {
-      final first = openingHours.first;
-      if (first is Map<String, dynamic> && first['days'] is List) {
-        rDays = first['days'] as List<dynamic>;
+    // 2.b) estructura de horario/días dentro de campo "0"
+    Map<String, dynamic>? schedule;
+
+    // si tienes algún día openingHours, también lo soporta
+    if (rData['openingHours'] is List &&
+        (rData['openingHours'] as List).isNotEmpty) {
+      final first = (rData['openingHours'] as List).first;
+      if (first is Map<String, dynamic>) schedule = first;
+    } else if (rData['openingHours'] is Map<String, dynamic>) {
+      final first = (rData['openingHours'] as Map<String, dynamic>)['0'];
+      if (first is Map<String, dynamic>) schedule = first;
+    } else if (rData['0'] is Map<String, dynamic>) {
+      // <- este es tu caso actual
+      schedule = rData['0'] as Map<String, dynamic>;
+    }
+
+    // si no hay horario configurado, dejamos pasar (no filtramos por esto)
+    if (schedule != null) {
+      // ----- días del restaurante -----
+      final rDays = schedule['days'] as List<dynamic>?;
+      if (rDays != null) {
+        if (todayIndex < 0 || todayIndex >= rDays.length) {
+          continue;
+        }
+        if (rDays[todayIndex] == false) {
+          // restaurante cerrado hoy -> no mostrar platos
+          continue;
+        }
       }
-    } else if (openingHours is Map<String, dynamic>) {
-      // por si openingHours fuera un mapa con clave "0"
-      final first = openingHours['0'];
-      if (first is Map<String, dynamic> && first['days'] is List) {
-        rDays = first['days'] as List<dynamic>;
+
+      // ----- horario del restaurante -----
+      final openingStr = schedule['openingTime'] as String?;
+      final closingStr = schedule['closingTime'] as String?;
+
+      if (openingStr != null && closingStr != null) {
+        final openMinutes = _timeStringToMinutes(openingStr);
+        final closeMinutes = _timeStringToMinutes(closingStr);
+
+        if (openMinutes != null && closeMinutes != null) {
+          // asumimos horario normal (no cruza medianoche)
+          final isOpenNow =
+              nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
+
+          if (!isOpenNow) {
+            // fuera de horario -> no mostrar platos
+            continue;
+          }
+        }
       }
     }
 
-    if (rDays != null) {
-      if (todayIndex < 0 || todayIndex >= rDays.length) {
-        continue;
-      }
-      if (rDays[todayIndex] == false) {
-        // restaurante cerrado hoy → no mostrar ningún plato suyo
-        continue;
-      }
-    }
-
-    // Si llegó hasta aquí, plato y restaurante están disponibles hoy
+    // Si llegó hasta aquí, plato y restaurante pasan todas las reglas
     result.add(Food.fromFirestore(d));
   }
 
   return result;
+}
+
+/// Convierte "HH:mm" en minutos desde las 00:00, ej.
+/// "08:00" -> 480, "22:30" -> 1350.
+/// Devuelve null si el formato no es válido.
+int? _timeStringToMinutes(String time) {
+  try {
+    final parts = time.split(':');
+    if (parts.length != 2) return null;
+    final h = int.parse(parts[0]);
+    final m = int.parse(parts[1]);
+    if (h < 0 || h > 23 || m < 0 || m > 59) return null;
+    return h * 60 + m;
+  } catch (_) {
+    return null;
+  }
 }
