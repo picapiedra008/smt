@@ -11,93 +11,119 @@ import 'package:food_point/widgets/bottom_nav_var.dart';
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+@override
+Widget build(BuildContext context) {
+  final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sabores de Cochabamba'),
-        centerTitle: true,
-      ),
-      bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance.collection('foods').snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return const Center(child: Text('Error al cargar los platos'));
-          }
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Sabores de Cochabamba'),
+      centerTitle: true,
+    ),
+    bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    // 👇 AQUÍ VA TODA LA NUEVA SECCIÓN
+    body: StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance.collection('foods').snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error al cargar los platos'));
+        }
 
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No hay platos registrados.'));
-          }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-          final docs = snapshot.data!.docs;
-          final foods = docs.map((d) => Food.fromFirestore(d)).toList();
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+          return const Center(child: Text('No hay platos registrados.'));
+        }
 
-          // Plato del día aleatorio pero estable por día
-          final now = DateTime.now();
-          final seed = now.year * 10000 + now.month * 100 + now.day;
-          final random = Random(seed);
-          final featured = foods[random.nextInt(foods.length)];
+        final docs = snapshot.data!.docs;
 
-          final otrosPlatos =
-              foods.where((food) => food.id != featured.id).toList();
+        // 🔥 Usamos un FutureBuilder para hacer el filtrado asíncrono
+        return FutureBuilder<List<Food>>(
+          future: _filterFoodsForToday(docs),
+          builder: (context, fSnap) {
+            if (fSnap.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Recomendado hoy',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
+            if (fSnap.hasError) {
+              return Center(
+                child: Text('Error al filtrar platos: ${fSnap.error}'),
+              );
+            }
 
-                _FeaturedFoodCard(food: featured),
+            final foods = fSnap.data ?? [];
 
-                const SizedBox(height: 20),
+            if (foods.isEmpty) {
+              return const Center(
+                child: Text('Hoy no hay platos disponibles.'),
+              );
+            }
 
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'Buscar platos...',
-                    prefixIcon: const Icon(Icons.search),
-                    filled: true,
-                    fillColor: theme.colorScheme.surface,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+            // Plato del día aleatorio pero estable por día
+            final now = DateTime.now();
+            final seed = now.year * 10000 + now.month * 100 + now.day;
+            final random = Random(seed);
+            final featured = foods[random.nextInt(foods.length)];
+
+            final otrosPlatos =
+                foods.where((food) => food.id != featured.id).toList();
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recomendado hoy',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                ),
+                  const SizedBox(height: 8),
 
-                const SizedBox(height: 20),
-                Text(
-                  'Catálogo de Platos',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  _FeaturedFoodCard(food: featured),
+
+                  const SizedBox(height: 20),
+
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Buscar platos...',
+                      prefixIcon: const Icon(Icons.search),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 10),
 
-                Column(
-                  children: otrosPlatos
-                      .map((food) => _CatalogFoodCard(food: food))
-                      .toList(),
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
+                  const SizedBox(height: 20),
+                  Text(
+                    'Catálogo de Platos',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  Column(
+                    children: otrosPlatos
+                        .map((food) => _CatalogFoodCard(food: food))
+                        .toList(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    ),
+  );
+}
+
 }
 
 class _FeaturedFoodCard extends StatelessWidget {
@@ -672,4 +698,80 @@ String _normalizeText(String input) {
   }
 
   return s;
+}
+
+/// Filtra los platos para el día de hoy considerando:
+/// - days[] del plato
+/// - openingHours[0].days[] del restaurante (si está cerrado hoy, no se muestran sus platos)
+Future<List<Food>> _filterFoodsForToday(
+    List<QueryDocumentSnapshot> docs) async {
+  final db = FirebaseFirestore.instance;
+
+  // DateTime.weekday: 1 = lunes ... 7 = domingo
+  final todayIndex = DateTime.now().weekday - 1; // 0 = lunes, 6 = domingo
+
+  final List<Food> result = [];
+
+  for (final d in docs) {
+    final data = d.data() as Map<String, dynamic>;
+
+    // ---------- 1) FILTRO POR DIAS DEL PLATO ----------
+    final dishDays = data['days'];
+    if (dishDays != null && dishDays is List) {
+      if (todayIndex < 0 || todayIndex >= dishDays.length) {
+        // índice fuera de rango -> descartamos
+        continue;
+      }
+      if (dishDays[todayIndex] == false) {
+        // plato no disponible hoy
+        continue;
+      }
+    }
+
+    // ---------- 2) FILTRO POR DIAS DEL RESTAURANTE ----------
+    final restaurantId = data['restaurantId'] as String?;
+    if (restaurantId == null || restaurantId.isEmpty) {
+      // sin restaurante asociado -> descartamos
+      continue;
+    }
+
+    final rSnap =
+        await db.collection('restaurants').doc(restaurantId).get();
+    if (!rSnap.exists) continue;
+
+    final rData = rSnap.data() as Map<String, dynamic>? ?? {};
+
+    // En tu Firestore: openingHours[0].days[0..6]
+    List<dynamic>? rDays;
+
+    final openingHours = rData['openingHours'];
+
+    if (openingHours is List && openingHours.isNotEmpty) {
+      final first = openingHours.first;
+      if (first is Map<String, dynamic> && first['days'] is List) {
+        rDays = first['days'] as List<dynamic>;
+      }
+    } else if (openingHours is Map<String, dynamic>) {
+      // por si openingHours fuera un mapa con clave "0"
+      final first = openingHours['0'];
+      if (first is Map<String, dynamic> && first['days'] is List) {
+        rDays = first['days'] as List<dynamic>;
+      }
+    }
+
+    if (rDays != null) {
+      if (todayIndex < 0 || todayIndex >= rDays.length) {
+        continue;
+      }
+      if (rDays[todayIndex] == false) {
+        // restaurante cerrado hoy → no mostrar ningún plato suyo
+        continue;
+      }
+    }
+
+    // Si llegó hasta aquí, plato y restaurante están disponibles hoy
+    result.add(Food.fromFirestore(d));
+  }
+
+  return result;
 }
