@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:http/http.dart' as http;
 
 class AuthService {
   AuthService._();
@@ -83,5 +86,65 @@ class AuthService {
     }
 
     return userCredential;
+  }
+
+  Future<void> updateEmailAndPassword({
+    required String newEmail,
+    required String currentPassword,
+    String? newPassword,
+  }) async {
+    final user = _auth.currentUser!;
+    final idToken = await user.getIdToken();
+
+    // Reautenticación
+    final cred = EmailAuthProvider.credential(
+      email: user.email!,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(cred);
+
+    // Actualizar email usando REST API
+    if (newEmail != user.email) {
+      final emailUrl = Uri.parse(
+        'https://identitytoolkit.googleapis.com/v1/accounts:update?key=TU_API_KEY',
+      );
+      final emailResponse = await http.post(
+        emailUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'idToken': idToken,
+          'email': newEmail,
+          'returnSecureToken': true,
+        }),
+      );
+      final emailData = jsonDecode(emailResponse.body);
+      if (emailResponse.statusCode != 200) {
+        throw Exception(
+          "Error al actualizar email: ${emailData['error']['message']}",
+        );
+      }
+    }
+
+    // Actualizar contraseña si se pasó
+    if (newPassword != null && newPassword.isNotEmpty) {
+      final passUrl = Uri.parse(
+        'https://identitytoolkit.googleapis.com/v1/accounts:update?key=TU_API_KEY',
+      );
+      final passResponse = await http.post(
+        passUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'idToken': idToken,
+          'password': newPassword,
+          'returnSecureToken': true,
+        }),
+      );
+      final passData = jsonDecode(passResponse.body);
+      if (passResponse.statusCode != 200) {
+        throw Exception(
+          "Error al actualizar contraseña: ${passData['error']['message']}",
+        );
+      }
+    }
   }
 }

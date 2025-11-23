@@ -15,12 +15,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nombreController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   @override
   void dispose() {
     _nombreController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -28,31 +30,40 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.colorScheme.background,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const RegisterHeader(),
-                const SizedBox(height: 32),
-                RegisterForm(
-                  formKey: _formKey,
-                  nombreController: _nombreController,
-                  emailController: _emailController,
-                  passwordController: _passwordController,
-                ),
-                const SizedBox(height: 24),
-                RegisterButton(
-                  formKey: _formKey,
-                  nombreController: _nombreController,
-                  emailController: _emailController,
-                  passwordController: _passwordController,
-                ),
-              ],
+    return WillPopScope(
+      onWillPop: () async {
+        // Redirigir a la ruta /perfil cuando se presione el botón de atrás
+        Navigator.pushReplacementNamed(context, '/perfil');
+        return false; // Evita el comportamiento por defecto
+      },
+      child: Scaffold(
+        backgroundColor: theme.colorScheme.background,
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const RegisterHeader(),
+                  const SizedBox(height: 32),
+                  RegisterForm(
+                    formKey: _formKey,
+                    nombreController: _nombreController,
+                    emailController: _emailController,
+                    passwordController: _passwordController,
+                    confirmPasswordController: _confirmPasswordController,
+                  ),
+                  const SizedBox(height: 32),
+                  RegisterButton(
+                    formKey: _formKey,
+                    nombreController: _nombreController,
+                    emailController: _emailController,
+                    passwordController: _passwordController,
+                    confirmPasswordController: _confirmPasswordController,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
