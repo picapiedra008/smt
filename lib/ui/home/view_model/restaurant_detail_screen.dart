@@ -2,12 +2,33 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:food_point/models/restaurant.dart';
-import 'package:food_point/models/restaurant.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class RestaurantDetailScreen extends StatelessWidget {
   final Restaurant restaurant;
 
   const RestaurantDetailScreen({super.key, required this.restaurant});
+
+  void _openMaps() {
+    if (restaurant.locationGeo != null) {
+      final lat = restaurant.locationGeo!.latitude;
+      final lng = restaurant.locationGeo!.longitude;
+
+      final url = Uri.parse(
+          "https://www.google.com/maps/search/?api=1&query=$lat,$lng");
+
+      launchUrl(url, mode: LaunchMode.externalApplication);
+    } else {
+      // Si no hay geopoint, intenta con el string "lat,lon"
+      final parts = restaurant.location.split(",");
+      if (parts.length == 2) {
+        final url = Uri.parse(
+            "https://www.google.com/maps/search/?api=1&query=${parts[0]},${parts[1]}");
+
+        launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +48,7 @@ class RestaurantDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // IMAGEN DEL RESTAURANTE
+            /// IMAGEN
             ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: logoBytes != null
@@ -47,6 +68,7 @@ class RestaurantDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
+            /// NOMBRE
             Text(
               restaurant.nombre,
               style: const TextStyle(
@@ -57,28 +79,37 @@ class RestaurantDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // DIRECCIÓN
+            /// UBICACIÓN
             Row(
               children: [
                 const Icon(Icons.location_on, size: 20),
                 const SizedBox(width: 5),
                 Expanded(
                   child: Text(
-                    restaurant.location.isNotEmpty
-                        ? restaurant.location
-                        : "Dirección no disponible",
+                    restaurant.locationGeo != null
+                        ? "${restaurant.locationGeo!.latitude}, ${restaurant.locationGeo!.longitude}"
+                        : (restaurant.location.isNotEmpty
+                            ? restaurant.location
+                            : "Ubicación no disponible"),
                     style: const TextStyle(fontSize: 16),
                   ),
                 ),
               ],
             ),
 
+            /// BOTÓN PARA ABRIR MAPS
+            TextButton.icon(
+              onPressed: _openMaps,
+              icon: const Icon(Icons.map),
+              label: const Text("Abrir en Google Maps"),
+            ),
+
             const SizedBox(height: 10),
 
-            // DISTANCIA
+            /// DISTANCIA
             Row(
               children: [
-                const Icon(Icons.map, size: 20),
+                const Icon(Icons.directions_walk, size: 20),
                 const SizedBox(width: 5),
                 Text(
                   "${restaurant.distanciaKm.toStringAsFixed(2)} km",
@@ -89,7 +120,7 @@ class RestaurantDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 10),
 
-            // RATING
+            /// RATING
             Row(
               children: [
                 const Icon(Icons.star, size: 20, color: Colors.amber),
@@ -103,7 +134,7 @@ class RestaurantDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // HORARIO
+            /// HORARIO
             const Text(
               "Horario:",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -117,7 +148,7 @@ class RestaurantDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 20),
 
-            // DESCRIPCIÓN
+            /// DESCRIPCIÓN
             const Text(
               "Descripción:",
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
