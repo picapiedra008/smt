@@ -97,9 +97,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ---------- TARJETA DE LOGIN -----------
   Widget _buildFormCard(BuildContext context, ThemeData theme) {
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Color de borde según tema
+    final borderColor = isDark ? Colors.white24 : Colors.black12;
+
     return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      color:
+          theme.cardTheme.color ?? (isDark ? Colors.grey[850] : Colors.white),
+      elevation: theme.cardTheme.elevation ?? 5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(15),
+        side: BorderSide(color: borderColor, width: 1.2), // <-- borde dinámico
+      ),
       child: Padding(
         padding: const EdgeInsets.all(25),
         child: Column(
@@ -133,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
       controller: emailController,
       decoration: const InputDecoration(
         labelText: 'Correo Electrónico',
-        prefixIcon: Icon(Icons.email),
+        prefixIcon: Icon(Icons.email, color: Colors.grey),
       ),
       keyboardType: TextInputType.emailAddress,
     );
@@ -145,11 +155,11 @@ class _LoginScreenState extends State<LoginScreen> {
       obscureText: _obscurePassword,
       decoration: InputDecoration(
         labelText: 'Contraseña',
-        prefixIcon: const Icon(Icons.lock),
+        prefixIcon: const Icon(Icons.lock, color: Colors.grey),
         suffixIcon: IconButton(
           icon: Icon(
             _obscurePassword ? Icons.visibility_off : Icons.visibility,
-            color: theme.colorScheme.primary,
+            color: Colors.grey,
           ),
           onPressed: () {
             setState(() {
@@ -227,24 +237,43 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // ---------- BOTÓN GOOGLE -----------
   Widget _buildGoogleButton(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Fondo del botón según tema
+    final backgroundColor = isDark ? Colors.grey[850] : Colors.white;
+
+    // Borde según tema
+    final borderColor = isDark ? Colors.white12 : Colors.black12;
+
+    // Color del texto/loader
+    final foregroundColor = isDark ? Colors.white : Colors.black87;
+
     return SizedBox(
       height: 50,
       width: double.infinity,
       child: ElevatedButton.icon(
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black87,
+          backgroundColor: backgroundColor,
+          foregroundColor: foregroundColor,
+          side: BorderSide(color: borderColor, width: 1.2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
         icon: _isLoadingGoogle
-            ? const SizedBox(
+            ? SizedBox(
                 height: 20,
                 width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation(foregroundColor),
+                ),
               )
-            : Image.asset('assets/img/google.png', height: 24),
+            : Image.asset('assets/img/google1.png', height: 30, width: 30),
         label: Text(
           _isLoadingGoogle ? "Conectando..." : "Continuar con Google",
-          style: const TextStyle(fontSize: 16),
         ),
         onPressed: _isLoadingGoogle ? null : () => _handleGoogleSignIn(context),
       ),

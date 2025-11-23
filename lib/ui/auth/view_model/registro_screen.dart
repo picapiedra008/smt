@@ -15,12 +15,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _nombreController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
 
   @override
   void dispose() {
     _nombreController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -50,13 +52,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     nombreController: _nombreController,
                     emailController: _emailController,
                     passwordController: _passwordController,
+                    confirmPasswordController: _confirmPasswordController,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
                   RegisterButton(
                     formKey: _formKey,
                     nombreController: _nombreController,
                     emailController: _emailController,
                     passwordController: _passwordController,
+                    confirmPasswordController: _confirmPasswordController,
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'package:food_point/data/services/auth_service.dart';
 import 'package:food_point/ui/auth/view_model/registro_screen.dart';
 import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
 import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
+import 'package:food_point/ui/perfil_page/view_model/perfil_edit_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
 import 'package:food_point/ui/core/themes/app_theme.dart';
@@ -59,6 +60,7 @@ class MyApp extends StatelessWidget {
         '/catalogo': (context) => const DishCatalogPage(),
         '/restaurantes': (context) => const SaboresApp(),
         '/perfil': (context) => PerfilPage(),
+        '/perfil/edit': (context) => EditProfilePage(),
         '/perfil/restaurantes': (context) => const MisRestaurantesPage(),
         '/perfil/restaurantes/create': (context) => const RestaurantFormPage(),
         '/firebaseError': (context) => const _FirebaseErrorScreen(),
@@ -92,7 +94,7 @@ class _AuthGate extends StatelessWidget {
         }
 
         //if (snapshot.hasData) {
-          return const HomeScreen(); // 🔥 Sesión activa → ir al inicio
+        return const HomeScreen(); // 🔥 Sesión activa → ir al inicio
         //}
 
         //return LoginScreen(firebaseConnected: true); // 🔥 No logueado → login
