@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:food_point/data/services/auth_service.dart';
+import 'package:food_point/widgets/calificacion_promedio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
@@ -332,13 +333,10 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                const Icon(Icons.star, color: Colors.amber, size: 18),
-                const SizedBox(width: 4),
-                Text("${r.calificacion}"),
-                const SizedBox(width: 16),
-                const Icon(Icons.access_time, color: Colors.grey, size: 18),
-                const SizedBox(width: 4),
-                Text(r.horario, style: const TextStyle(color: Colors.grey)),
+                CalificacionPromedio(
+                  restaurantId: r.id,
+                ),
+                
               ],
             ),
             const SizedBox(height: 8),

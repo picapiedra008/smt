@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sabores de Cochabamba'),
+        title: const Text('Sabores de mi Tierra'),
         centerTitle: true,
       ),
       bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
