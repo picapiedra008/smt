@@ -6,6 +6,8 @@ import 'package:food_point/ui/listar_restaurantes/view_model/listar_restaurantes
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:food_point/data/services/auth_service.dart'; // Importa tu AuthService
+import 'package:food_point/widgets/calificacion_form.dart';//borrar despues de probar
 
 final FirebaseFirestore db = FirebaseFirestore.instance;
 
@@ -28,7 +30,8 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
 
-  String user_id = "user1";// Cuando este listo el login, deben poner el metodo para obtener el id del usuario logeado
+  String? user_id; // Cambiado a nullable
+  bool _isLoadingUser = true; // Para controlar la carga del usuario
 
   File? _logoImage;
   String? _logoBase64;
@@ -53,11 +56,52 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
     _foods = [];
     _openingHours = [];
 
-    if (widget.restaurantId != null) {
-      _loadRestaurantData();
-    } else {
-      _addOpeningHour();
+    // Obtener el user ID primero
+    _getUserId().then((_) {
+      if (widget.restaurantId != null) {
+        _loadRestaurantData();
+      } else {
+        _addOpeningHour();
+      }
+    });
+  }
+
+  // Método para obtener el user ID
+  Future<void> _getUserId() async {
+    try {
+      final user = AuthService.instance.currentUser;
+      if (user != null) {
+        setState(() {
+          user_id = user.uid;
+          _isLoadingUser = false;
+        });
+      } else {
+        setState(() {
+          user_id = null;
+          _isLoadingUser = false;
+        });
+        // Redirigir al login si no hay usuario
+        _redirectToLogin();
+      }
+    } catch (e) {
+      setState(() {
+        user_id = null;
+        _isLoadingUser = false;
+      });
+      print('Error obteniendo user ID: $e');
+      _redirectToLogin();
     }
+  }
+
+  // Método para redirigir al login si no hay usuario
+  void _redirectToLogin() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Navigator.pushNamedAndRemoveUntil(
+        context, 
+        '/login', 
+        (route) => false
+      );
+    });
   }
 
   // Widget para selección de días con botones
@@ -401,6 +445,8 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
   }
 
   Future<void> _loadRestaurantData() async {
+    if (user_id == null) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -498,6 +544,11 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
   }
 
   Future<void> _saveOrUpdateRestaurant() async {
+    if (user_id == null) {
+      _redirectToLogin();
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     final hoursError = _validateOpeningHours();
@@ -601,7 +652,6 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
         );
       }
 
-
     } catch (e) {
       print('Error al guardar: $e');
       if (mounted) {
@@ -672,7 +722,6 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
       throw e;
     }
   }
-
 
   Future<void> _pickImage({bool isLogo = true, int? foodIndex}) async {
     final picker = ImagePicker();
@@ -820,6 +869,56 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Si está cargando el usuario, mostrar un loading
+    if (_isLoadingUser) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.restaurantId != null ? 'Editar Restaurante' : 'Crear Restaurante')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Verificando autenticación...'),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Si no hay usuario autenticado, mostrar mensaje de error
+    if (user_id == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'No hay usuario autenticado',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text('Debes iniciar sesión para crear o editar restaurantes'),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context, 
+                    '/login', 
+                    (route) => false
+                  );
+                },
+                child: const Text('Iniciar Sesión'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     final isEditing = widget.restaurantId != null;
 
     return Scaffold(
@@ -841,7 +940,9 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
                 child: ListView(
                   children: [
                     _buildLogoSection(),
-
+               /*     CalificacionForm(
+                      restaurantId: widget.restaurantId!,
+                    ),*/
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
@@ -1018,7 +1119,6 @@ class _RestaurantFormPageState extends State<RestaurantFormPage> {
           (route) => false,
         );
       }
-
 
     } catch (e) {
       print('Error al eliminar restaurante: $e');
