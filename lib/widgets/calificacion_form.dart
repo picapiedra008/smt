@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:food_point/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CalificacionForm extends StatefulWidget {

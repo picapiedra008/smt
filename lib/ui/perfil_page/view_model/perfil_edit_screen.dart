@@ -3,12 +3,12 @@ import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:food_point/data/services/auth_service.dart';
-import 'package:food_point/domain/models/user_model.dart';
-import 'package:food_point/ui/core/themes/app_theme.dart';
-import 'package:food_point/ui/core/ui/custom_message_banner.dart';
-import 'package:food_point/ui/perfil_page/view_model/widgets/custom_input_field.dart';
-import 'package:food_point/ui/perfil_page/view_model/widgets/custom_password_field.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/domain/models/user_model.dart';
+import 'package:Sabores_de_mi_Tierra/ui/core/themes/app_theme.dart';
+import 'package:Sabores_de_mi_Tierra/ui/core/ui/custom_message_banner.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/widgets/custom_input_field.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/widgets/custom_password_field.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 

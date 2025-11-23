@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:food_point/ui/auth/widgets/register_button.dart';
-import 'package:food_point/ui/auth/widgets/register_form.dart';
-import 'package:food_point/ui/auth/widgets/register_header.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/widgets/register_button.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/widgets/register_form.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/widgets/register_header.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

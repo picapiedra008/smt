@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:food_point/ui/core/themes/app_theme.dart';
+import 'package:Sabores_de_mi_Tierra/ui/core/themes/app_theme.dart';
 
 class CustomPasswordField extends StatelessWidget {
   final String label;

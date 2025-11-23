@@ -1,4 +1,4 @@
-name: Sabores de mi Tierra
+name: Sabores_de_mi_Tierra
 description: "App de restaurantes informativas para la materia de programación móvil UMSS."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.

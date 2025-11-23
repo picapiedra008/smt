@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:food_point/domain/models/food.dart';
-import 'package:food_point/widgets/bottom_nav_var.dart';
+import 'package:Sabores_de_mi_Tierra/domain/models/food.dart';
+import 'package:Sabores_de_mi_Tierra/widgets/bottom_nav_var.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});

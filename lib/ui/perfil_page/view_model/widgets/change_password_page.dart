@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:food_point/ui/perfil_page/view_model/widgets/custom_password_field.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/widgets/custom_password_field.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});

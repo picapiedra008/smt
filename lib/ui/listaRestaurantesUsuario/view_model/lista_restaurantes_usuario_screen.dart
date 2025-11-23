@@ -1,11 +1,11 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:food_point/data/services/auth_service.dart';
-import 'package:food_point/widgets/calificacion_promedio.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/widgets/calificacion_promedio.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
-import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
+import 'package:Sabores_de_mi_Tierra/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
 
 class MisRestaurantesPage extends StatefulWidget {
   const MisRestaurantesPage({super.key});

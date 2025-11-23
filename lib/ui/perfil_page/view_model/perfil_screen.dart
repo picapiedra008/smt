@@ -2,11 +2,11 @@ import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:food_point/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:food_point/widgets/bottom_nav_var.dart';
-import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
+import 'package:Sabores_de_mi_Tierra/widgets/bottom_nav_var.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});

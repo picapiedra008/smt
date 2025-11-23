@@ -1,8 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:food_point/data/services/auth_service.dart';
-import 'package:food_point/ui/auth/view_model/login_screen.dart';
-import 'package:food_point/ui/core/ui/custom_message_banner.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/view_model/login_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/core/ui/custom_message_banner.dart';
 
 class RegisterButton extends StatelessWidget {
   final GlobalKey<FormState> formKey;

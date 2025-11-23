@@ -2,12 +2,12 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:food_point/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:food_point/data/services/auth_service.dart'; // Importa tu AuthService
-import 'package:food_point/widgets/calificacion_form.dart';//borrar despues de probar
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart'; // Importa tu AuthService
+import 'package:Sabores_de_mi_Tierra/widgets/calificacion_form.dart';//borrar despues de probar
 
 final FirebaseFirestore db = FirebaseFirestore.instance;
 

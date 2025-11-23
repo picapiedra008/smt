@@ -4,8 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
-import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
-import 'package:food_point/widgets/bottom_nav_var.dart';
+import 'package:Sabores_de_mi_Tierra/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
+import 'package:Sabores_de_mi_Tierra/widgets/bottom_nav_var.dart';
 
 
 class SaboresApp extends StatelessWidget {

@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:food_point/data/services/auth_service.dart';
-import 'package:food_point/ui/auth/view_model/registro_screen.dart';
-import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
-import 'package:food_point/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
-import 'package:food_point/ui/perfil_page/view_model/perfil_edit_screen.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/view_model/registro_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/perfil_edit_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
-import 'package:food_point/ui/core/themes/app_theme.dart';
-import 'package:food_point/ui/auth/view_model/login_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/core/themes/app_theme.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/view_model/login_screen.dart';
 
 // importa las páginas
-import 'package:food_point/ui/home/view_model/home_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/home/view_model/home_screen.dart';
 import 'widgets/catalogo_platos.dart';
-import 'package:food_point/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
-import 'package:food_point/ui/perfil_page/view_model/perfil_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/perfil_screen.dart';
 
 // auth
 
