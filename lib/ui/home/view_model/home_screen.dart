@@ -63,7 +63,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sabores de mi Tierra'),
+        title: const Text('Sabores de Cochabamba'),
         centerTitle: true,
       ),
       bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
