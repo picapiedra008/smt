@@ -1,3 +1,4 @@
+import 'package:Sabores_de_mi_Tierra/ui/auth/widgets/logo_animado.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -40,7 +41,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _buildHeader(theme),
+                const LogoAnimado(),
                 const SizedBox(height: 30),
                 _buildFormCard(context, theme),
                 const SizedBox(height: 20),
@@ -48,6 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   '🌿 Tradición culinaria del valle cochabambino 🌿',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onBackground.withOpacity(0.6),
+                    fontSize: 10,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -118,7 +120,7 @@ class _LoginScreenState extends State<LoginScreen> {
               'Iniciar Sesión',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                fontSize: 22,
+                fontSize: 24,
               ),
             ),
             const SizedBox(height: 20),
@@ -329,7 +331,10 @@ class _LoginScreenState extends State<LoginScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("¿No tienes cuenta? "),
+        Text(
+          "¿No tienes cuenta? ",
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+        ),
         GestureDetector(
           onTap: () => Navigator.push(
             context,
@@ -340,6 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
             style: TextStyle(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.bold,
+              fontSize: 13,
             ),
           ),
         ),

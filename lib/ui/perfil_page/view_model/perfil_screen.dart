@@ -74,7 +74,15 @@ class _PerfilPageState extends State<PerfilPage> {
   // Widget para mostrar cuando no hay usuario logueado
   Widget _buildNoUserScreen(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mi Perfil"), centerTitle: true),
+      appBar: AppBar(
+        title: const Text("Mi Perfil"),
+        titleTextStyle: TextStyle(
+          fontSize: 36,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+        centerTitle: true,
+      ),
       bottomNavigationBar: const CustomBottomNav(selectedIndex: 1),
       body: Center(
         child: Padding(
@@ -476,6 +484,7 @@ class _PerfilPageState extends State<PerfilPage> {
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
+              fontSize: 20,
             ),
           ),
           content: Text(
@@ -491,6 +500,8 @@ class _PerfilPageState extends State<PerfilPage> {
                 "Cancelar",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
                 ),
               ),
             ),
@@ -504,7 +515,7 @@ class _PerfilPageState extends State<PerfilPage> {
                 // 🔄 Redirigir al login
                 Navigator.pushNamedAndRemoveUntil(
                   context,
-                  '/login',
+                  '/inicio',
                   (route) => false,
                 );
               },
@@ -513,6 +524,11 @@ class _PerfilPageState extends State<PerfilPage> {
                 foregroundColor: theme.colorScheme.onError, // texto blanco
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
+                ),
+
+                textStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
               child: const Text("Cerrar Sesión"),
