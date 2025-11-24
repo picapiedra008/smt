@@ -1054,8 +1054,3 @@ int? _timeStringToMinutes(String time) {
     return null;
   }
 }
-<<<<<<< HEAD
-
-
-=======
->>>>>>> c99e1365455f011af49f506416e5492cc088175d
