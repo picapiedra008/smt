@@ -1,4 +1,5 @@
 import 'package:Sabores_de_mi_Tierra/ui/auth/widgets/logo_animado.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listaPlatos2/view_model/listaPlatos2.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -211,7 +212,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const PlatosAgrupadosScreen()),
       );
     } on FirebaseAuthException catch (e) {
       String message = "Ocurrió un error inesperado.";
@@ -317,7 +318,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const PlatosAgrupadosScreen()),
       );
     } catch (e) {
       _showError("Error al conectar con Google.");

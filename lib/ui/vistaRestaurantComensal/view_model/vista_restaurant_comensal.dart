@@ -19,9 +19,7 @@ class RestaurantUserView extends StatefulWidget {
   State<RestaurantUserView> createState() => _RestaurantUserViewState();
 }
 
-class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  final List<String> _dayNames = ['L', 'M', 'Mi', 'J', 'V', 'S', 'D'];
+class _RestaurantUserViewState extends State<RestaurantUserView> {
   final List<String> _fullDayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
   
   Map<String, dynamic>? _restaurantData;
@@ -33,24 +31,16 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
   void initState() {
     super.initState();
     _currentDayIndex = _getCurrentDayIndex();
-    _tabController = TabController(
-      length: 7,
-      vsync: this,
-      initialIndex: _currentDayIndex,
-    );
     _loadRestaurantData();
   }
 
   int _getCurrentDayIndex() {
     final now = DateTime.now();
-    // DateTime.weekday: 1=Monday, 7=Sunday
-    // Nuestra lista: 0=Lunes, 6=Domingo
     return now.weekday - 1;
   }
 
   Future<void> _loadRestaurantData() async {
     try {
-      // Cargar datos del restaurante
       DocumentSnapshot restaurantDoc = await db
           .collection('restaurants')
           .doc(widget.restaurantId)
@@ -61,7 +51,6 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
           _restaurantData = restaurantDoc.data() as Map<String, dynamic>;
         });
 
-        // Cargar platos del restaurante
         await _loadRestaurantFoods();
       }
     } catch (e) {
@@ -85,7 +74,6 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
       for (var doc in foodsSnapshot.docs) {
         var foodData = doc.data() as Map<String, dynamic>;
         
-        // Solo incluir platos que no estén ocultos
         if (foodData['visibility'] != 'oculto') {
           loadedFoods.add({
             'id': doc.id,
@@ -137,200 +125,92 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
     return hours != 'Cerrado' && hours != 'Horario no disponible';
   }
 
-  Widget _buildRestaurantHeader() {
-    if (_restaurantData == null) return Container();
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        border: Border.all(color: Colors.grey.shade200), // CORREGIDO AQUÍ
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              // Logo del restaurante
-              if (_restaurantData!['logoBase64'] != null && _restaurantData!['logoBase64'].isNotEmpty)
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(
-                      image: MemoryImage(
-                        _decodeBase64(_restaurantData!['logoBase64']),
-                      ),
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                )
-              else
-                Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(Icons.restaurant, color: Colors.grey),
-                ),
-              
-              const SizedBox(width: 16),
-              
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _restaurantData!['name'] ?? 'Sin nombre',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        CalificacionPromedio(
-                          restaurantId: widget.restaurantId,
-                          size: 18,
-                          color: Colors.amber,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _restaurantData!['description'] ?? 'Sin descripción',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDayTab(int index) {
-    final isOpen = _isRestaurantOpen(index);
-    final isToday = index == _currentDayIndex;
-    
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isToday ? const Color(0xFFFF6A00) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            _dayNames[index],
-            style: TextStyle(
-              color: isToday ? Colors.white : Colors.black87,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Icon(
-            isOpen ? Icons.check_circle : Icons.cancel,
-            size: 12,
-            color: isToday ? Colors.white : (isOpen ? Colors.green : Colors.red),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDayContent(int dayIndex) {
+  Widget _buildDayCard(int dayIndex) {
     final foods = _getFoodsForDay(dayIndex);
     final openingHours = _getOpeningHoursForDay(dayIndex);
     final isOpen = _isRestaurantOpen(dayIndex);
+    final isToday = dayIndex == _getCurrentDayIndex();
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Estado y horario
-          Card(
-            child: Padding(
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.85,
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header del día
+            Container(
               padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isToday ? const Color(0xFFFF6A00) : Colors.grey[100],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+              ),
               child: Row(
                 children: [
                   Icon(
                     isOpen ? Icons.check_circle : Icons.cancel,
-                    color: isOpen ? Colors.green : Colors.red,
+                    color: isToday ? Colors.white : (isOpen ? Colors.green : Colors.red),
+                    size: 20,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isOpen ? 'Abierto' : 'Cerrado',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isOpen ? Colors.green : Colors.red,
-                          ),
-                        ),
-                        Text(
-                          openingHours,
-                          style: TextStyle(color: Colors.grey[600]),
-                        ),
-                      ],
+                    child: Text(
+                      _fullDayNames[dayIndex],
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isToday ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    openingHours,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isToday ? Colors.white : Colors.grey[600],
                     ),
                   ),
                 ],
               ),
             ),
-          ),
 
-          const SizedBox(height: 16),
-
-          // Platos del día
-          Text(
-            'Platos disponibles (${_fullDayNames[dayIndex]})',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            // Lista de platos
+            Expanded(
+              child: foods.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.fastfood, size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay platos disponibles',
+                            style: TextStyle(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        ...foods.map((food) => _buildFoodCard(food)).toList(),
+                      ],
+                    ),
             ),
-          ),
-          const SizedBox(height: 12),
-
-          if (foods.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                children: [
-                  Icon(Icons.fastfood, size: 64, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No hay platos disponibles para ${_fullDayNames[dayIndex]}',
-                    style: TextStyle(color: Colors.grey[600]),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            )
-          else
-            Column(
-              children: foods.map((food) => _buildFoodCard(food)).toList(),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -338,6 +218,7 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
   Widget _buildFoodCard(Map<String, dynamic> food) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
@@ -345,8 +226,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
           children: [
             // Imagen del plato
             Container(
-              width: 80,
-              height: 80,
+              width: 60,
+              height: 60,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[200],
@@ -384,7 +265,7 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
                       food['description'],
                       style: TextStyle(
                         color: Colors.grey[600],
-                        fontSize: 14,
+                        fontSize: 12,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -400,13 +281,58 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
                       _getCategoryText(food['category']),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 12,
+                        fontSize: 10,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
                   ),
                 ],
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCalificacionSection() {
+    return Card(
+      margin: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Calificación del restaurante',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                CalificacionPromedio(
+                  restaurantId: widget.restaurantId,
+                  size: 24,
+                  color: Colors.amber,
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Basado en las opiniones de nuestros clientes',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            CalificacionForm(
+              restaurantId: widget.restaurantId,
             ),
           ],
         ),
@@ -481,6 +407,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
       );
     }
 
+    final isCurrentlyOpen = _isRestaurantOpen(_currentDayIndex);
+
     return Scaffold(
       appBar: AppBar(
         title: Text(_restaurantData!['name'] ?? 'Restaurante'),
@@ -488,41 +416,147 @@ class _RestaurantUserViewState extends State<RestaurantUserView> with SingleTick
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        bottom: TabBar(
-          controller: _tabController,
-          isScrollable: true,
-          labelPadding: const EdgeInsets.symmetric(horizontal: 4),
-          tabs: List.generate(7, (index) => _buildDayTab(index)),
-        ),
       ),
-      body: Column(
-        children: [
-          _buildRestaurantHeader(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: List.generate(7, (index) => _buildDayContent(index)),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header con logo, nombre, estado y descripción
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              color: Colors.grey[50],
+              child: Column(
+                children: [
+                  // Logo
+                  if (_restaurantData!['logoBase64'] != null && _restaurantData!['logoBase64'].isNotEmpty)
+                    Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        image: DecorationImage(
+                          image: MemoryImage(
+                            _decodeBase64(_restaurantData!['logoBase64']),
+                          ),
+                          fit: BoxFit.cover,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(Icons.restaurant, color: Colors.grey, size: 60),
+                    ),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Nombre del restaurante
+                  Text(
+                    _restaurantData!['name'] ?? 'Sin nombre',
+                    style: const TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  
+                  const SizedBox(height: 12),
+                  
+                  // Estado actual (Abierto/Cerrado)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isCurrentlyOpen ? Colors.green[50] : Colors.red[50],
+                      borderRadius: BorderRadius.circular(25),
+                      border: Border.all(
+                        color: isCurrentlyOpen ? Colors.green : Colors.red,
+                        width: 2,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isCurrentlyOpen ? Icons.check_circle : Icons.cancel,
+                          color: isCurrentlyOpen ? Colors.green : Colors.red,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isCurrentlyOpen ? 'Abierto ahora' : 'Cerrado ahora',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isCurrentlyOpen ? Colors.green : Colors.red,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Descripción
+                  Text(
+                    _restaurantData!['description'] ?? 'Sin descripción',
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 16,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
-      // Widget de calificación fijo en la parte inferior
-      persistentFooterButtons: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
-          child: CalificacionForm(
-            restaurantId: widget.restaurantId,
-          ),
-        ),
-      ],
-    );
-  }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
+            // Cards de días (scroll horizontal)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Horarios y Platos',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            
+            SizedBox(
+              height: 400, // Altura fija para el scroll horizontal
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: 7,
+                itemBuilder: (context, index) {
+                  return _buildDayCard(index);
+                },
+              ),
+            ),
+
+            // Sección de calificación
+            _buildCalificacionSection(),
+          ],
+        ),
+      ),
+    );
   }
 }

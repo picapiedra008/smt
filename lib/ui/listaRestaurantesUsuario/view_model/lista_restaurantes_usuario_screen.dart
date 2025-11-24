@@ -123,6 +123,11 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
     Navigator.pushNamed(context, '/perfil/restaurantes/create');
   }
 
+  // Función para manejar el botón de atrás
+  void _onBackPressed() {
+    Navigator.pushReplacementNamed(context, '/perfil');
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredList = restaurantes
@@ -139,9 +144,7 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: _onBackPressed, // Cambiado aquí
         ),
         actions: [
           IconButton(
