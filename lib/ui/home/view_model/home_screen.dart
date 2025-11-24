@@ -115,12 +115,15 @@ class _HomeScreenState extends State<HomeScreen> {
               final featured = foods[random.nextInt(foods.length)];
 
               // base del catálogo: todos menos el destacado
-              final baseCatalog =
-                  foods.where((food) => food.id != featured.id).toList();
+              final baseCatalog = foods
+                  .where((food) => food.id != featured.id)
+                  .toList();
 
               // aplicar filtro del buscador (en memoria)
-              final catalogFoods =
-                  _filterFoodsBySearch(baseCatalog, _searchQuery);
+              final catalogFoods = _filterFoodsBySearch(
+                baseCatalog,
+                _searchQuery,
+              );
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -201,21 +204,26 @@ class _FeaturedFoodCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (_) => FoodDetailScreen(food: food),
-          ),
+          MaterialPageRoute(builder: (_) => FoodDetailScreen(food: food)),
         );
       },
       borderRadius: BorderRadius.circular(18),
       child: Card(
         elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
         clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: BorderSide(
+            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+            width: 1.5, // grosor del borde
+          ),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -236,7 +244,9 @@ class _FeaturedFoodCard extends StatelessWidget {
                   left: 12,
                   child: Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.redAccent,
                       borderRadius: BorderRadius.circular(20),
@@ -251,7 +261,11 @@ class _FeaturedFoodCard extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(
-                  left: 16, right: 16, top: 12, bottom: 12),
+                left: 16,
+                right: 16,
+                top: 12,
+                bottom: 12,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -263,8 +277,7 @@ class _FeaturedFoodCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (food.descripcion != null &&
-                      food.descripcion!.isNotEmpty)
+                  if (food.descripcion != null && food.descripcion!.isNotEmpty)
                     Text(
                       food.descripcion!,
                       maxLines: 2,
@@ -277,8 +290,11 @@ class _FeaturedFoodCard extends StatelessWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      const Icon(Icons.store_mall_directory,
-                          size: 16, color: Colors.grey),
+                      const Icon(
+                        Icons.store_mall_directory,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
                       const SizedBox(width: 4),
 
                       // contador dinámico de restaurantes
@@ -357,10 +373,7 @@ class _CatalogFoodCard extends StatelessWidget {
         ),
         title: Text(
           food.nombre,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -376,42 +389,99 @@ class _CatalogFoodCard extends StatelessWidget {
                 }
 
                 final count = snapshot.data!.length;
-                final label =
-                    count == 1 ? '1 restaurante' : '$count restaurantes';
+                final label = count == 1
+                    ? '1 restaurante'
+                    : '$count restaurantes';
 
                 return Text(label);
               },
             ),
 
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Chip(
-                  label: Text(food.tipo),
-                  backgroundColor: Colors.orange.shade100,
-                  labelStyle: const TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.bold,
+            const SizedBox(width: 12),
+
+            // 📌 Información del plato
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 🌟 Fila con nombre a la izquierda y estrellas a la derecha
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nombre del plato
+                      Expanded(
+                        child: Text(
+                          food.nombre,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 6),
+
+                      // Estrellas + puntuación
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.star, color: Colors.amber, size: 20),
+                          const SizedBox(width: 3),
+                          Text(
+                            food.rating.toStringAsFixed(1),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-                const Spacer(),
-                const Icon(Icons.star, color: Colors.amber, size: 20),
-                Text(
-                  food.rating.toStringAsFixed(1),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
+
+                  const SizedBox(height: 6),
+
+                  // Restaurante
+                  const Text(
+                    '1 restaurante',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // Chip de tipo de comida
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade100,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    child: Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 4,
+                      children: [
+                        Text(
+                          food.tipo,
+                          style: const TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => FoodDetailScreen(food: food),
-            ),
-          );
-        },
       ),
     );
   }
@@ -428,9 +498,7 @@ class FoodDetailScreen extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(food.nombre),
-      ),
+      appBar: AppBar(title: Text(food.nombre)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -442,10 +510,7 @@ class FoodDetailScreen extends StatelessWidget {
               child: SizedBox(
                 height: 220,
                 width: double.infinity,
-                child: _buildFoodImage(
-                  food.imagenBase64,
-                  fit: BoxFit.cover,
-                ),
+                child: _buildFoodImage(food.imagenBase64, fit: BoxFit.cover),
               ),
             ),
             const SizedBox(height: 16),
@@ -483,10 +548,7 @@ class FoodDetailScreen extends StatelessWidget {
                     final nombreRest =
                         data['name'] ?? data['nombre'] ?? "Restaurante";
 
-                    return Text(
-                      nombreRest,
-                      style: theme.textTheme.bodyMedium,
-                    );
+                    return Text(nombreRest, style: theme.textTheme.bodyMedium);
                   },
                 ),
               ],
@@ -501,32 +563,41 @@ class FoodDetailScreen extends StatelessWidget {
                 color: Colors.orange,
                 fontWeight: FontWeight.bold,
               ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14), // bordes redondeados
+                side: const BorderSide(
+                  color: Colors.orange, // color del borde
+                  width: 1.5, // grosor del borde
+                ),
+              ),
             ),
             const SizedBox(height: 16),
 
             if (food.descripcion != null && food.descripcion!.isNotEmpty)
-              Text(
-                food.descripcion!,
-                style: theme.textTheme.bodyMedium,
-              )
+              Text(food.descripcion!, style: theme.textTheme.bodyMedium)
             else
               Text(
                 'Sin descripción disponible.',
-                style: theme.textTheme.bodyMedium!
-                    .copyWith(color: Colors.grey.shade600),
+                style: theme.textTheme.bodyMedium!.copyWith(
+                  color: Colors.grey.shade600,
+                ),
               ),
 
             const SizedBox(height: 24),
 
             Row(
               children: [
-                const Icon(Icons.store_mall_directory_outlined,
-                    color: Colors.white),
+                const Icon(
+                  Icons.store_mall_directory_outlined,
+                  color: Colors.grey,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   'Restaurantes que ofrecen este plato',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
               ],
             ),
@@ -578,25 +649,35 @@ class _RestaurantCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: Colors.grey.shade900,
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+          width: 1.2,
+        ),
+      ),
+      color: isDark ? Colors.grey.shade900 : Colors.white,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  RestaurantDetailScreen(restaurant: restaurant),
+              builder: (_) => RestaurantDetailScreen(restaurant: restaurant),
             ),
           );
         },
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Logo del restaurante
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: _buildRestaurantLogo(
@@ -606,16 +687,19 @@ class _RestaurantCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
+
+              // Información principal
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       restaurant.nombre,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: isDark ? Colors.white : Colors.black87,
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
                       ),
@@ -627,22 +711,28 @@ class _RestaurantCard extends StatelessWidget {
                         restaurant.descripcion!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white70,
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black54,
                           fontSize: 13,
                         ),
                       ),
                   ],
                 ),
               ),
+
               const SizedBox(width: 8),
+
+              // Rating
               Row(
                 children: [
                   const Icon(Icons.star, color: Colors.amber, size: 18),
                   const SizedBox(width: 4),
                   Text(
                     restaurant.rating.toStringAsFixed(1),
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(
+                      color: isDark ? Colors.white : Colors.black87,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
@@ -674,18 +764,15 @@ Widget _buildFoodImage(
 
     final remainder = base64String.length % 4;
     if (remainder != 0) {
-      base64String =
-          base64String.padRight(base64String.length + (4 - remainder), '=');
+      base64String = base64String.padRight(
+        base64String.length + (4 - remainder),
+        '=',
+      );
     }
 
     final bytes = base64Decode(base64String);
 
-    return Image.memory(
-      bytes,
-      width: width,
-      height: height,
-      fit: fit,
-    );
+    return Image.memory(bytes, width: width, height: height, fit: fit);
   } catch (e) {
     debugPrint('No es Base64 válido o falló decode: $e');
   }
@@ -708,11 +795,7 @@ Widget _foodImagePlaceholder(double? width, double? height) {
     height: height,
     color: Colors.grey[300],
     alignment: Alignment.center,
-    child: const Icon(
-      Icons.image_not_supported,
-      color: Colors.grey,
-      size: 40,
-    ),
+    child: const Icon(Icons.image_not_supported, color: Colors.grey, size: 40),
   );
 }
 
@@ -907,8 +990,7 @@ Future<List<Food>> _filterFoodsForToday(
     final restaurantId = data['restaurantId'] as String?;
     if (restaurantId == null || restaurantId.isEmpty) continue;
 
-    final rSnap =
-        await db.collection('restaurants').doc(restaurantId).get();
+    final rSnap = await db.collection('restaurants').doc(restaurantId).get();
     if (!rSnap.exists) continue;
 
     final rData = rSnap.data() as Map<String, dynamic>? ?? {};
@@ -972,5 +1054,8 @@ int? _timeStringToMinutes(String time) {
     return null;
   }
 }
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> c99e1365455f011af49f506416e5492cc088175d

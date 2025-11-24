@@ -158,7 +158,24 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Card(
-                    color: const Color(0xFFFF6A00).withOpacity(0.1),
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.orange.shade900.withOpacity(
+                            0.2,
+                          ) // fondo más visible en oscuro
+                        : const Color(
+                            0xFFFF6A00,
+                          ).withOpacity(0.1), // fondo original en claro
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.orange.shade700
+                            : Colors
+                                  .orange
+                                  .shade200, // borde visible en ambos modos
+                        width: 1.2,
+                      ),
+                    ),
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Row(
@@ -171,8 +188,12 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
                           Expanded(
                             child: Text(
                               "Gestiona tus ${restaurantes.length} restaurante${restaurantes.length != 1 ? 's' : ''}",
-                              style: const TextStyle(
-                                color: Colors.black87,
+                              style: TextStyle(
+                                color:
+                                    Theme.of(context).brightness ==
+                                        Brightness.dark
+                                    ? Colors.white
+                                    : Colors.black87,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -272,8 +293,17 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
   Widget _buildRestauranteCard(Restaurante r) {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       elevation: 1,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? Colors.grey.shade700
+              : Colors.grey.shade300, // borde visible en ambos modos
+          width: 1.2,
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(10),
         child: Column(
@@ -331,23 +361,15 @@ class _MisRestaurantesPageState extends State<MisRestaurantesPage> {
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                CalificacionPromedio(
-                  restaurantId: r.id,
-                ),
-                
-              ],
-            ),
+            Row(children: [CalificacionPromedio(restaurantId: r.id)]),
             const SizedBox(height: 8),
             Text(
               r.descripcion,
-              style: const TextStyle(color: Colors.black54),
+              style: const TextStyle(color: Colors.grey),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             const SizedBox(height: 10),
-
             // Botones de acción
             Row(
               children: [
