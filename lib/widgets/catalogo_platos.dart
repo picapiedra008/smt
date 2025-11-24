@@ -32,7 +32,6 @@ class DishCatalogPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
               Expanded(
                 child: StreamBuilder<List<Dish>>(
                   stream: service.streamDishes(),
@@ -103,9 +102,7 @@ class _DishCard extends StatelessWidget {
                   height: 90,
                 ),
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,14 +121,16 @@ class _DishCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const Icon(Icons.location_on,
+                            size: 16, color: Colors.grey),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             '${dish.restaurantes} restaurantes',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 13),
                           ),
                         ),
                       ],
@@ -140,7 +139,6 @@ class _DishCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 92),
                 child: FittedBox(
@@ -151,9 +149,12 @@ class _DishCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: dish.tipo == 'Cena' ? Colors.orange[400] : Colors.amber[600],
+                          color: dish.tipo == 'Cena'
+                              ? Colors.orange[400]
+                              : Colors.amber[600],
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -168,7 +169,8 @@ class _DishCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.star, color: Colors.orange, size: 18),
+                          const Icon(Icons.star,
+                              color: Colors.orange, size: 18),
                           const SizedBox(width: 4),
                           Text(
                             dish.rating.toStringAsFixed(1),
@@ -247,9 +249,12 @@ class DishDetailSheet extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: dish.tipo == 'Cena' ? Colors.orange[400] : Colors.amber[600],
+                      color: dish.tipo == 'Cena'
+                          ? Colors.orange[400]
+                          : Colors.amber[600],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -268,20 +273,39 @@ class DishDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
+              /// 👉 Aquí podrías mostrar la descripción si tu modelo la tiene
+              /// por ejemplo `dish.descripcion` o `dish.description`.
+              /// Descomenta y ajusta el nombre del campo:
+              /*
+              if (dish.descripcion != null && dish.descripcion!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    dish.descripcion!,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              */
+
               Row(
                 children: [
                   const Icon(Icons.group_outlined, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
                     'Restaurantes Disponibles (${dish.restaurantes})',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
 
+              // 🔥 AQUÍ SE CARGA LA LISTA DE RESTAURANTES POR NAME
               FutureBuilder<List<Restaurant>>(
-                future: service.fetchRestaurantsForDish(dish.id),
+                future: service.fetchRestaurantsByDishName(dish.nombre),
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Padding(
@@ -290,11 +314,15 @@ class DishDetailSheet extends StatelessWidget {
                     );
                   }
                   if (snap.hasError) {
-                    return Text('Error al cargar restaurantes: ${snap.error}');
+                    return Text(
+                      'Error al cargar restaurantes: ${snap.error}',
+                    );
                   }
                   final rs = snap.data ?? [];
                   if (rs.isEmpty) {
-                    return const Text('Aún sin restaurantes vinculados a este plato.');
+                    return const Text(
+                      'Aún no hay restaurantes que ofrezcan este plato.',
+                    );
                   }
                   return Column(
                     children: rs.map((r) => _RestaurantCard(r)).toList(),
@@ -352,7 +380,7 @@ class _RestaurantCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(r.direccion, style: const TextStyle(color: Colors.black54)),
+          Text(r.location, style: const TextStyle(color: Colors.black54)),
           const SizedBox(height: 8),
           Row(
             children: [
