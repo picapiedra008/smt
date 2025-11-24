@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -9,124 +8,191 @@ import 'package:food_point/models/restaurant.dart';
 import 'package:food_point/widgets/bottom_nav_var.dart';
 import 'package:food_point/ui/home/view_model/restaurant_detail_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+/// Caché para no repetir queries de restaurantes por nombre de plato
+final Map<String, Future<List<Restaurant>>> _restaurantsByFoodCache = {};
+
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
-@override
-Widget build(BuildContext context) {
-  final theme = Theme.of(context);
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
 
-  return Scaffold(
-    appBar: AppBar(
-      title: const Text('Sabores de Cochabamba'),
-      centerTitle: true,
-    ),
-    bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
+class _HomeScreenState extends State<HomeScreen> {
+  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
 
-    // 👇 AQUÍ VA TODA LA NUEVA SECCIÓN
-    body: StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance.collection('foods').snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return const Center(child: Text('Error al cargar los platos'));
-        }
+  Future<List<Food>>? _foodsFuture;
+  List<QueryDocumentSnapshot>? _lastDocs;
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  void _updateFoodsFuture(List<QueryDocumentSnapshot> docs) {
+    // Obtenemos solo la lista de IDs actuales
+    final newIds = docs.map((d) => d.id).toList();
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(child: Text('No hay platos registrados.'));
-        }
+    // Si ya tenemos lastDocs y los IDs son iguales, no recalculamos
+    if (_lastDocs != null) {
+      final oldIds = _lastDocs!.map((d) => d.id).toList();
 
-        final docs = snapshot.data!.docs;
+      if (_listsAreEqual(newIds, oldIds)) {
+        return; // no vuelve a ejecutar _filterFoodsForToday
+      }
+    }
 
-        // 🔥 Usamos un FutureBuilder para hacer el filtrado asíncrono
-        return FutureBuilder<List<Food>>(
-          future: _filterFoodsForToday(docs),
-          builder: (context, fSnap) {
-            if (fSnap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    // Si cambió la lista de docs, actualizamos future
+    _lastDocs = List.from(docs);
+    _foodsFuture = _filterFoodsForToday(docs);
+  }
 
-            if (fSnap.hasError) {
-              return Center(
-                child: Text('Error al filtrar platos: ${fSnap.error}'),
-              );
-            }
+  bool _listsAreEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 
-            final foods = fSnap.data ?? [];
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
-            if (foods.isEmpty) {
-              return const Center(
-                child: Text('Hoy no hay platos disponibles.'),
-              );
-            }
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
 
-            // Plato del día aleatorio pero estable por día
-            final now = DateTime.now();
-            final seed = now.year * 10000 + now.month * 100 + now.day;
-            final random = Random(seed);
-            final featured = foods[random.nextInt(foods.length)];
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Sabores de Cochabamba'),
+        centerTitle: true,
+      ),
+      bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('foods').snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(child: Text('Error al cargar los platos'));
+          }
 
-            final otrosPlatos =
-                foods.where((food) => food.id != featured.id).toList();
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Recomendado hoy',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No hay platos registrados.'));
+          }
 
-                  _FeaturedFoodCard(food: featured),
+          final docs = snapshot.data!.docs;
 
-                  const SizedBox(height: 20),
+          // Actualizamos (o reutilizamos) el Future solo cuando cambian los docs
+          _updateFoodsFuture(docs);
 
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Buscar platos...',
-                      prefixIcon: const Icon(Icons.search),
-                      filled: true,
-                      fillColor: theme.colorScheme.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+          return FutureBuilder<List<Food>>(
+            future: _foodsFuture,
+            builder: (context, fSnap) {
+              if (fSnap.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (fSnap.hasError) {
+                return Center(
+                  child: Text('Error al filtrar platos: ${fSnap.error}'),
+                );
+              }
+
+              final foods = fSnap.data ?? [];
+
+              if (foods.isEmpty) {
+                return const Center(
+                  child: Text('Hoy no hay platos disponibles.'),
+                );
+              }
+
+              // Plato del día aleatorio pero estable por día
+              final now = DateTime.now();
+              final seed = now.year * 10000 + now.month * 100 + now.day;
+              final random = Random(seed);
+              final featured = foods[random.nextInt(foods.length)];
+
+              // base del catálogo: todos menos el destacado
+              final baseCatalog =
+                  foods.where((food) => food.id != featured.id).toList();
+
+              // aplicar filtro del buscador (en memoria)
+              final catalogFoods =
+                  _filterFoodsBySearch(baseCatalog, _searchQuery);
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Recomendado hoy',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
 
-                  const SizedBox(height: 20),
-                  Text(
-                    'Catálogo de Platos',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                    _FeaturedFoodCard(food: featured),
+
+                    const SizedBox(height: 20),
+
+                    // 🔍 BUSCADOR (solo busca al tocar el botón o Enter)
+                    TextField(
+                      controller: _searchController,
+                      onSubmitted: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Buscar platos...',
+                        prefixIcon: const Icon(Icons.search),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.search),
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = _searchController.text;
+                              // si está vacío, _filterFoodsBySearch devuelve todos
+                            });
+                          },
+                        ),
+                        filled: true,
+                        fillColor: theme.colorScheme.surface,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
 
-                  Column(
-                    children: otrosPlatos
-                        .map((food) => _CatalogFoodCard(food: food))
-                        .toList(),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    ),
-  );
+                    const SizedBox(height: 20),
+                    Text(
+                      'Catálogo de Platos',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    Column(
+                      children: catalogFoods
+                          .map((food) => _CatalogFoodCard(food: food))
+                          .toList(),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
 }
 
-}
-
+/// ----------- CARD DEL PLATO DESTACADO -----------
 class _FeaturedFoodCard extends StatelessWidget {
   final Food food;
 
@@ -214,13 +280,36 @@ class _FeaturedFoodCard extends StatelessWidget {
                       const Icon(Icons.store_mall_directory,
                           size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
-                      Text(
-                        '1 restaurante',
-                        style: TextStyle(
-                          color: Colors.grey.shade700,
-                          fontSize: 12,
-                        ),
+
+                      // contador dinámico de restaurantes
+                      FutureBuilder<List<Restaurant>>(
+                        future: _fetchRestaurantsByFoodName(food.nombre),
+                        builder: (context, snapshot) {
+                          if (!snapshot.hasData) {
+                            return Text(
+                              '— restaurantes',
+                              style: TextStyle(
+                                color: Colors.grey.shade700,
+                                fontSize: 12,
+                              ),
+                            );
+                          }
+
+                          final count = snapshot.data!.length;
+                          final label = count == 1
+                              ? '1 restaurante'
+                              : '$count restaurantes';
+
+                          return Text(
+                            label,
+                            style: TextStyle(
+                              color: Colors.grey.shade700,
+                              fontSize: 12,
+                            ),
+                          );
+                        },
                       ),
+
                       const Spacer(),
                       const Icon(Icons.star, color: Colors.amber, size: 18),
                       const SizedBox(width: 4),
@@ -243,6 +332,7 @@ class _FeaturedFoodCard extends StatelessWidget {
   }
 }
 
+/// ----------- CARD DE CADA PLATO EN EL CATÁLOGO -----------
 class _CatalogFoodCard extends StatelessWidget {
   final Food food;
 
@@ -276,7 +366,23 @@ class _CatalogFoodCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            const Text('1 restaurante'),
+
+            // contador dinámico de restaurantes
+            FutureBuilder<List<Restaurant>>(
+              future: _fetchRestaurantsByFoodName(food.nombre),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Text('— restaurantes');
+                }
+
+                final count = snapshot.data!.length;
+                final label =
+                    count == 1 ? '1 restaurante' : '$count restaurantes';
+
+                return Text(label);
+              },
+            ),
+
             const SizedBox(height: 4),
             Row(
               children: [
@@ -342,7 +448,6 @@ class FoodDetailScreen extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
 
             // Rating + restaurante propietario
@@ -358,10 +463,8 @@ class FoodDetailScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 20),
-
                 const Icon(Icons.store_mall_directory, size: 20),
                 const SizedBox(width: 6),
-
                 StreamBuilder<DocumentSnapshot>(
                   stream: FirebaseFirestore.instance
                       .collection('restaurants')
@@ -377,7 +480,8 @@ class FoodDetailScreen extends StatelessWidget {
 
                     final data =
                         snap.data!.data() as Map<String, dynamic>? ?? {};
-                    final nombreRest = data['name'] ?? data['nombre'] ?? "Restaurante";
+                    final nombreRest =
+                        data['name'] ?? data['nombre'] ?? "Restaurante";
 
                     return Text(
                       nombreRest,
@@ -390,7 +494,6 @@ class FoodDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // Tipo
             Chip(
               label: Text(food.tipo),
               backgroundColor: Colors.orange.shade100,
@@ -399,10 +502,8 @@ class FoodDetailScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 16),
 
-            // Descripción
             if (food.descripcion != null && food.descripcion!.isNotEmpty)
               Text(
                 food.descripcion!,
@@ -417,7 +518,6 @@ class FoodDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // ---------- NUEVA SECCIÓN: LISTA DE RESTAURANTES ----------
             Row(
               children: [
                 const Icon(Icons.store_mall_directory_outlined,
@@ -484,19 +584,19 @@ class _RestaurantCard extends StatelessWidget {
       color: Colors.grey.shade900,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-       onTap: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => RestaurantDetailScreen(restaurant: restaurant),
-    ),
-  );
-},
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) =>
+                  RestaurantDetailScreen(restaurant: restaurant),
+            ),
+          );
+        },
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
             children: [
-              // Imagen del restaurante
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: _buildRestaurantLogo(
@@ -506,8 +606,6 @@ class _RestaurantCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Nombre + descripción (recortada)
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -537,22 +635,14 @@ class _RestaurantCard extends StatelessWidget {
                   ],
                 ),
               ),
-
               const SizedBox(width: 8),
-
-              // Rating a la derecha
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: Colors.amber, size: 18),
-                      const SizedBox(width: 4),
-                      Text(
-                        restaurant.rating.toStringAsFixed(1),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ],
+                  const Icon(Icons.star, color: Colors.amber, size: 18),
+                  const SizedBox(width: 4),
+                  Text(
+                    restaurant.rating.toStringAsFixed(1),
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ],
               ),
@@ -563,7 +653,6 @@ class _RestaurantCard extends StatelessWidget {
     );
   }
 }
-
 
 /// ------------ Helpers de imagen (Base64 o URL) ------------
 Widget _buildFoodImage(
@@ -635,7 +724,6 @@ Widget _buildRestaurantLogo(
   if (logoBase64 == null || logoBase64.isEmpty) {
     return _foodImagePlaceholder(width, height);
   }
-  // Reutilizamos la misma lógica de _buildFoodImage:
   return _buildFoodImage(
     logoBase64,
     width: width,
@@ -644,135 +732,126 @@ Widget _buildRestaurantLogo(
   );
 }
 
-/// ------------ LÓGICA PARA BUSCAR RESTAURANTES POR NOMBRE DE PLATO ------------
-/// Busca todos los foods cuyo nombre (name/nombre) CONTENGA [foodName],
-/// sin importar mayúsculas ni acentos, y devuelve la lista de restaurantes.
-Future<List<Restaurant>> _fetchRestaurantsByFoodName(String foodName) async {
+/// ------------ BÚSQUEDA DE RESTAURANTES POR NOMBRE DE PLATO ------------
+Future<List<Restaurant>> _fetchRestaurantsByFoodName(String foodName) {
   final db = FirebaseFirestore.instance;
 
-  // normalizar el nombre para búsqueda (sin mayúsculas ni acentos)
   final searchNorm = _normalizeText(foodName);
 
-  // 0=domingo, 6=sábado (coincide con tu arreglo days[])
-  final todayIndex = DateTime.now().weekday % 7;
-  final now = DateTime.now();
-  final nowMinutes = now.hour * 60 + now.minute;
+  final cached = _restaurantsByFoodCache[searchNorm];
+  if (cached != null) return cached;
 
-  // 1) Obtener TODOS los foods
-  final foodsSnap = await db.collection('foods').get();
+  final future = () async {
+    final todayIndex = DateTime.now().weekday % 7; // 0=domingo, 6=sábado
+    final now = DateTime.now();
+    final nowMinutes = now.hour * 60 + now.minute;
 
-  // 2) Filtrar foods que coinciden en nombre Y cumplen reglas del plato
-  final Set<String> restaurantIds = {};
+    final foodsSnap = await db.collection('foods').get();
 
-  for (final doc in foodsSnap.docs) {
-    final data = doc.data() as Map<String, dynamic>;
+    final Set<String> restaurantIds = {};
 
-    // nombre
-    final rawName = (data['name'] ?? data['nombre'] ?? '').toString();
-    final nameNorm = _normalizeText(rawName);
-    if (!nameNorm.contains(searchNorm)) continue;
+    for (final doc in foodsSnap.docs) {
+      final data = doc.data() as Map<String, dynamic>;
 
-    // visibility del plato
-    final dishVisibility =
-        (data['visibility'] ?? data['visibilidad'] ?? 'publico')
-            .toString()
-            .toLowerCase();
-    if (dishVisibility == 'oculto') continue;
+      final rawName = (data['name'] ?? data['nombre'] ?? '').toString();
+      final nameNorm = _normalizeText(rawName);
+      if (!nameNorm.contains(searchNorm)) continue;
 
-    // días del plato
-    final dishDays = data['days'];
-    if (dishDays != null && dishDays is List) {
-      if (todayIndex < 0 || todayIndex >= dishDays.length) continue;
-      if (dishDays[todayIndex] == false) continue;
-    }
-
-    // restaurante asociado
-    final restaurantId = data['restaurantId'] as String?;
-    if (restaurantId == null || restaurantId.isEmpty) continue;
-
-    restaurantIds.add(restaurantId);
-  }
-
-  if (restaurantIds.isEmpty) return [];
-
-  // 3) Traer restaurantes por lotes (whereIn máx. 10 IDs)
-  final List<Restaurant> restaurantes = [];
-  const chunkSize = 10;
-  final ids = restaurantIds.toList();
-
-  for (var i = 0; i < ids.length; i += chunkSize) {
-    final chunk = ids.sublist(
-      i,
-      i + chunkSize > ids.length ? ids.length : i + chunkSize,
-    );
-
-    final rsSnap = await db
-        .collection('restaurants')
-        .where(FieldPath.documentId, whereIn: chunk)
-        .get();
-
-    for (final rDoc in rsSnap.docs) {
-      final rData = rDoc.data() as Map<String, dynamic>? ?? {};
-
-      // ---- visibility del restaurante ----
-      final restVisibility =
-          (rData['visibility'] ?? rData['visibilidad'] ?? 'publico')
+      final dishVisibility =
+          (data['visibility'] ?? data['visibilidad'] ?? 'publico')
               .toString()
               .toLowerCase();
-      if (restVisibility == 'oculto') continue;
+      if (dishVisibility == 'oculto') continue;
 
-      // ---- estructura de horario / días (campo "0" u openingHours) ----
-      Map<String, dynamic>? schedule;
-
-      if (rData['openingHours'] is List &&
-          (rData['openingHours'] as List).isNotEmpty) {
-        final first = (rData['openingHours'] as List).first;
-        if (first is Map<String, dynamic>) schedule = first;
-      } else if (rData['openingHours'] is Map<String, dynamic>) {
-        final first = (rData['openingHours'] as Map<String, dynamic>)['0'];
-        if (first is Map<String, dynamic>) schedule = first;
-      } else if (rData['0'] is Map<String, dynamic>) {
-        // <- tu caso actual
-        schedule = rData['0'] as Map<String, dynamic>;
+      final dishDays = data['days'];
+      if (dishDays != null && dishDays is List) {
+        if (todayIndex < 0 || todayIndex >= dishDays.length) continue;
+        if (dishDays[todayIndex] == false) continue;
       }
 
-      if (schedule != null) {
-        // días del restaurante
-        final rDays = schedule['days'] as List<dynamic>?;
-        if (rDays != null) {
-          if (todayIndex < 0 || todayIndex >= rDays.length) continue;
-          if (rDays[todayIndex] == false) continue;
+      final restaurantId = data['restaurantId'] as String?;
+      if (restaurantId == null || restaurantId.isEmpty) continue;
+
+      restaurantIds.add(restaurantId);
+    }
+
+    if (restaurantIds.isEmpty) return <Restaurant>[];
+
+    final List<Restaurant> restaurantes = [];
+    const chunkSize = 10;
+    final ids = restaurantIds.toList();
+
+    for (var i = 0; i < ids.length; i += chunkSize) {
+      final chunk = ids.sublist(
+        i,
+        i + chunkSize > ids.length ? ids.length : i + chunkSize,
+      );
+
+      final rsSnap = await db
+          .collection('restaurants')
+          .where(FieldPath.documentId, whereIn: chunk)
+          .get();
+
+      for (final rDoc in rsSnap.docs) {
+        final rData = rDoc.data() as Map<String, dynamic>? ?? {};
+
+        final restVisibility =
+            (rData['visibility'] ?? rData['visibilidad'] ?? 'publico')
+                .toString()
+                .toLowerCase();
+        if (restVisibility == 'oculto') continue;
+
+        Map<String, dynamic>? schedule;
+
+        if (rData['openingHours'] is List &&
+            (rData['openingHours'] as List).isNotEmpty) {
+          final first = (rData['openingHours'] as List).first;
+          if (first is Map<String, dynamic>) schedule = first;
+        } else if (rData['openingHours'] is Map<String, dynamic>) {
+          final first = (rData['openingHours'] as Map<String, dynamic>)['0'];
+          if (first is Map<String, dynamic>) schedule = first;
+        } else if (rData['0'] is Map<String, dynamic>) {
+          schedule = rData['0'] as Map<String, dynamic>;
         }
 
-        // horario del restaurante
-        final openingStr = schedule['openingTime'] as String?;
-        final closingStr = schedule['closingTime'] as String?;
+        if (schedule != null) {
+          final rDays = schedule['days'] as List<dynamic>?;
+          if (rDays != null) {
+            if (todayIndex < 0 || todayIndex >= rDays.length) continue;
+            if (rDays[todayIndex] == false) continue;
+          }
 
-        if (openingStr != null && closingStr != null) {
-          final openMinutes = _timeStringToMinutes(openingStr);
-          final closeMinutes = _timeStringToMinutes(closingStr);
+          final openingStr = schedule['openingTime'] as String?;
+          final closingStr = schedule['closingTime'] as String?;
 
-          if (openMinutes != null && closeMinutes != null) {
-            final isOpenNow =
-                nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
-            if (!isOpenNow) continue;
+          if (openingStr != null && closingStr != null) {
+            final openMinutes = _timeStringToMinutes(openingStr);
+            final closeMinutes = _timeStringToMinutes(closingStr);
+
+            if (openMinutes != null && closeMinutes != null) {
+              final isOpenNow =
+                  nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
+              if (!isOpenNow) continue;
+            }
           }
         }
+
+        restaurantes.add(Restaurant.fromFirestore(rDoc));
       }
-
-      // si pasó todos los filtros, se agrega a la lista
-      restaurantes.add(Restaurant.fromFirestore(rDoc));
     }
-  }
 
-  return restaurantes;
+    return restaurantes;
+  }();
+
+  _restaurantsByFoodCache[searchNorm] = future;
+  return future;
 }
 
 String _normalizeText(String input) {
   var s = input.toLowerCase();
 
   const accents = 'áàäâãéèëêíìïîóòöôõúùüûñ';
-  const normal  = 'aaaaaeeeeiiiiooooouuuun';
+  const normal = 'aaaaaeeeeiiiiooooouuuun';
 
   for (var i = 0; i < accents.length; i++) {
     s = s.replaceAll(accents[i], normal[i]);
@@ -781,18 +860,30 @@ String _normalizeText(String input) {
   return s;
 }
 
+/// Búsqueda en memoria (para el catálogo)
+List<Food> _filterFoodsBySearch(List<Food> foods, String query) {
+  final q = _normalizeText(query.trim());
+  if (q.isEmpty) return foods;
+
+  return foods.where((food) {
+    final nameNorm = _normalizeText(food.nombre);
+    final descNorm = _normalizeText(food.descripcion ?? '');
+    return nameNorm.contains(q) || descNorm.contains(q);
+  }).toList();
+}
+
 /// Filtra los platos para el día de hoy considerando:
 /// - visibility del plato (publico/oculto)
 /// - days[] del plato
 /// - visibility del restaurante
-/// - 0.days[] del restaurante
-/// - horario (0.openingTime - 0.closingTime) del restaurante
+/// - días del restaurante
+/// - horario (openingTime - closingTime) del restaurante
 Future<List<Food>> _filterFoodsForToday(
-    List<QueryDocumentSnapshot> docs) async {
+  List<QueryDocumentSnapshot> docs,
+) async {
   final db = FirebaseFirestore.instance;
 
-  // DateTime.weekday: 1 = lunes ... 7 = domingo
-  final todayIndex = DateTime.now().weekday % 7; // // 0=domingo, 6=sábado
+  final todayIndex = DateTime.now().weekday % 7; // 0=domingo, 6=sábado
   final now = DateTime.now();
   final nowMinutes = now.hour * 60 + now.minute;
 
@@ -801,33 +892,20 @@ Future<List<Food>> _filterFoodsForToday(
   for (final d in docs) {
     final data = d.data() as Map<String, dynamic>;
 
-    // ---------- 0) VISIBILIDAD DEL PLATO ----------
     final dishVisibility =
         (data['visibility'] ?? data['visibilidad'] ?? 'publico')
             .toString()
             .toLowerCase();
+    if (dishVisibility == 'oculto') continue;
 
-    if (dishVisibility == 'oculto') {
-      // plato marcado como oculto -> no se muestra
-      continue;
-    }
-
-    // ---------- 1) DIAS DEL PLATO ----------
     final dishDays = data['days'];
     if (dishDays != null && dishDays is List) {
-      if (todayIndex < 0 || todayIndex >= dishDays.length) {
-        continue;
-      }
-      if (dishDays[todayIndex] == false) {
-        continue; // plato no disponible hoy
-      }
+      if (todayIndex < 0 || todayIndex >= dishDays.length) continue;
+      if (dishDays[todayIndex] == false) continue;
     }
 
-    // ---------- 2) DATOS DEL RESTAURANTE ----------
     final restaurantId = data['restaurantId'] as String?;
-    if (restaurantId == null || restaurantId.isEmpty) {
-      continue;
-    }
+    if (restaurantId == null || restaurantId.isEmpty) continue;
 
     final rSnap =
         await db.collection('restaurants').doc(restaurantId).get();
@@ -835,21 +913,14 @@ Future<List<Food>> _filterFoodsForToday(
 
     final rData = rSnap.data() as Map<String, dynamic>? ?? {};
 
-    // 2.a) visibilidad del restaurante
     final restVisibility =
         (rData['visibility'] ?? rData['visibilidad'] ?? 'publico')
             .toString()
             .toLowerCase();
+    if (restVisibility == 'oculto') continue;
 
-    if (restVisibility == 'oculto') {
-      // restaurante oculto -> no se muestra ningún plato suyo
-      continue;
-    }
-
-    // 2.b) estructura de horario/días dentro de campo "0"
     Map<String, dynamic>? schedule;
 
-    // si tienes algún día openingHours, también lo soporta
     if (rData['openingHours'] is List &&
         (rData['openingHours'] as List).isNotEmpty) {
       final first = (rData['openingHours'] as List).first;
@@ -858,25 +929,16 @@ Future<List<Food>> _filterFoodsForToday(
       final first = (rData['openingHours'] as Map<String, dynamic>)['0'];
       if (first is Map<String, dynamic>) schedule = first;
     } else if (rData['0'] is Map<String, dynamic>) {
-      // <- este es tu caso actual
       schedule = rData['0'] as Map<String, dynamic>;
     }
 
-    // si no hay horario configurado, dejamos pasar (no filtramos por esto)
     if (schedule != null) {
-      // ----- días del restaurante -----
       final rDays = schedule['days'] as List<dynamic>?;
       if (rDays != null) {
-        if (todayIndex < 0 || todayIndex >= rDays.length) {
-          continue;
-        }
-        if (rDays[todayIndex] == false) {
-          // restaurante cerrado hoy -> no mostrar platos
-          continue;
-        }
+        if (todayIndex < 0 || todayIndex >= rDays.length) continue;
+        if (rDays[todayIndex] == false) continue;
       }
 
-      // ----- horario del restaurante -----
       final openingStr = schedule['openingTime'] as String?;
       final closingStr = schedule['closingTime'] as String?;
 
@@ -885,28 +947,19 @@ Future<List<Food>> _filterFoodsForToday(
         final closeMinutes = _timeStringToMinutes(closingStr);
 
         if (openMinutes != null && closeMinutes != null) {
-          // asumimos horario normal (no cruza medianoche)
           final isOpenNow =
               nowMinutes >= openMinutes && nowMinutes <= closeMinutes;
-
-          if (!isOpenNow) {
-            // fuera de horario -> no mostrar platos
-            continue;
-          }
+          if (!isOpenNow) continue;
         }
       }
     }
 
-    // Si llegó hasta aquí, plato y restaurante pasan todas las reglas
     result.add(Food.fromFirestore(d));
   }
 
   return result;
 }
 
-/// Convierte "HH:mm" en minutos desde las 00:00, ej.
-/// "08:00" -> 480, "22:30" -> 1350.
-/// Devuelve null si el formato no es válido.
 int? _timeStringToMinutes(String time) {
   try {
     final parts = time.split(':');
