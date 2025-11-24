@@ -4,13 +4,18 @@ class Food {
   final String id;
   final String nombre;
   final String? descripcion;
-  /// Aquí guardamos lo que usemos para mostrar la imagen (puede ser URL o Base64)
   final String imagen;
   final String imagenBase64;
   final int restaurantes;
   final String tipo;
   final double rating;
-   final String restaurantId;
+  final String restaurantId;
+  
+  // Nuevos campos agregados
+  final List<bool> days;
+  final String visibility;
+  final String? imageFile;
+  final String category;
 
   Food({
     required this.id,
@@ -21,7 +26,11 @@ class Food {
     required this.tipo,
     required this.rating,
     required this.restaurantId,
+    required this.days,
+    required this.visibility,
+    required this.category,
     this.descripcion,
+    this.imageFile,
   });
 
   factory Food.fromFirestore(DocumentSnapshot doc) {
@@ -35,8 +44,6 @@ class Food {
         (data['descripcion'] ?? data['description']) as String?;
 
     // Imagen:
-    // - si tienes campo 'imagen' o 'imageUrl' se usan
-    // - si no, usamos 'imageBase64' (lo que tienes ahora en foods)
     final imagen = (data['imagen'] ??
             data['imageUrl'] ??
             data['image'] ??
@@ -52,16 +59,38 @@ class Food {
         ? rawRest
         : int.tryParse(rawRest.toString()) ?? 0;
 
-          final restaurantId = data['restaurantId'] ?? '';
+    final restaurantId = data['restaurantId'] ?? '';
 
     // Tipo / categoría
     final tipo = (data['tipo'] ?? data['category'] ?? '') as String;
 
-    // Rating
+    // Rating individual del plato
     final rawRating = data['rating'] ?? 0;
     final rating = rawRating is num
         ? rawRating.toDouble()
         : double.tryParse(rawRating.toString()) ?? 0.0;
+
+    // Nuevos campos - Days
+    final rawDays = data['days'];
+    List<bool> days = List.generate(7, (_) => false);
+    if (rawDays is List) {
+      for (int i = 0; i < rawDays.length && i < 7; i++) {
+        if (rawDays[i] is bool) {
+          days[i] = rawDays[i];
+        } else {
+          days[i] = rawDays[i] == true;
+        }
+      }
+    }
+
+    // Visibility
+    final visibility = (data['visibility'] ?? 'publico') as String;
+
+    // ImageFile
+    final imageFile = data['imageFile'] as String?;
+
+    // Category
+    final category = (data['category'] ?? 'cualquiera') as String;
 
     return Food(
       id: doc.id,
@@ -73,6 +102,27 @@ class Food {
       tipo: tipo,
       rating: rating,
       restaurantId: restaurantId,
+      days: days,
+      visibility: visibility,
+      imageFile: imageFile,
+      category: category,
     );
+  }
+
+  Map<String, dynamic> toFirestore() {
+    return {
+      'name': nombre,
+      'description': descripcion,
+      'days': days,
+      'category': category,
+      'visibility': visibility,
+      'imageBase64': imagenBase64,
+      'imageFile': imageFile,
+      'tipo': tipo,
+      'restaurantes': restaurantes,
+      'rating': rating,
+      'restaurantId': restaurantId,
+      'imagen': imagen,
+    };
   }
 }
