@@ -1,0 +1,171 @@
+1. Clasificación por Preferencias Alimentarias
+Estas categorías responden a creencias, estilo de vida o restricciones voluntarias:
+
+ • Vegetariano
+
+Sin carne ni pescado. Incluye lácteos y huevos (según tipo).
+
+ • Vegano
+
+Sin productos de origen animal: carne, lácteos, huevos, miel, mantequilla.
+
+ • Plant-Based
+
+Mayormente plantas; puede incluir algo de origen animal ocasional.
+
+ • Keto
+
+Bajos carbohidratos, alto contenido en grasas.
+
+ • Paleo
+
+Basado en carnes, frutas, vegetales, sin procesados ni lácteos.
+
+ • Sin gluten
+
+Apto para celíacos o personas sensibles al gluten.
+
+ • Sin lactosa
+
+Evita lácteos o usa alternativas vegetales.
+
+ • Halal
+
+Apto bajo normas islámicas.
+
+ • Kosher
+
+Apto según reglas judías.
+
+2. Clasificación por Necesidades Nutricionales
+
+Útil para personas que cuidan su salud o siguen dietas específicas:
+
+ • Hipocalórico
+
+Bajo en calorías, ideal para dieta de adelgazamiento.
+
+ • Hipercalórico
+
+Alto en calorías, para personas que buscan energía o subir de peso.
+
+ • Alto en proteínas
+
+Carnes, tofu, huevos, legumbres, shakes proteicos.
+
+ • Bajo en sodio
+
+Mínima sal, para hipertensión o dietas controladas.
+
+ • Bajo en azúcar
+
+Diabéticos o dieta low sugar.
+
+ • Alto en fibra
+
+Vegetales, cereales integrales, frutas.
+
+3. Clasificación por Sensibilidades o Alergias
+
+Muy útil para seguridad del comensal:
+
+ • Sin frutos secos
+ • Sin mariscos
+ • Sin huevo
+ • Sin soja
+ • Sin aditivos
+ • Sin colorantes / sin conservantes
+
+4. Clasificación por Tipo de Experiencia Gastronómica
+
+Depende del estilo del plato o bebida:
+
+ • Tradicional / típica
+
+Cocina local, recetas bolivianas, platos caseros.
+
+ • Gourmet
+
+Presentación elaborada, ingredientes premium.
+
+ • Exótica
+
+Ingredientes raros o cocina internacional poco común.
+
+ • Callejera / Street Food
+
+Rápida, económica, estilo popular.
+
+ • Casera
+
+Sabor de hogar, preparación tradicional.
+
+ • Fusión
+
+Mezcla de estilos (boliviano-japonés, mexicano-asiático, etc.)
+
+5. Clasificación por Sabor o Perfil Sensorial
+
+Esto ayuda a filtrar según gusto personal:
+
+ • Picante
+ • Dulce
+ • Salado
+ • Amargo
+ • Umami
+ • Agridulce
+ • Ácido / cítrico
+
+Para bebidas también:
+ • Refrescante, cremosa, fermentada, afrutada, seca, intensa, ligera.
+
+6. Clasificación por Momento de Consumo
+
+Muy útil en apps:
+
+ • Desayuno
+ • Almuerzo
+ • Cena
+ • Snack / merienda
+ • Postre
+ • Bebidas frías / calientes
+
+7. Clasificación por Origen o Cultura Gastronómica
+
+Sirve para turismo gastronómico:
+
+ • Boliviana / Andina
+ • Mediterránea
+ • Asiática
+ • Italiana
+ • Mexicana
+ • Árabe
+ • Fusión internacional
+
+8. Clasificación por Método de Cocción
+
+Ideal para filtros saludables:
+
+ • A la parrilla
+ • Al vapor
+ • Frito
+ • Horneado
+ • A la plancha
+ • A la olla
+ • Crudo (ej: sushi)
+
+
+SUGERENCIA ESPECIAL PARA TU APLICACIÓN
+
+Te recomiendo usar tags o etiquetas múltiples, no una sola categoría.
+Cada plato puede tener etiquetas en varios ejes:
+
+preferencias: ["vegano", "sin gluten"]
+nutricional: ["alto en proteína"]
+experiencia: ["típico boliviano"]
+sabor: ["picante"]
+momento: ["almuerzo"]
+origen: ["boliviano"]
+cocción: ["parrilla"]
+
+
