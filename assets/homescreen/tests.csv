@@ -1,0 +1,38 @@
+suite_title,title,description,precondition,type,severity,priority,behavior
+Registro y Autenticación,Registro exitoso de nuevo usuario,"1. Abrir la app.
+2. Tocar “Registrarse”.
+3. Ingresar nombre, email, contraseña y rol.
+4. Confirmar registro.",App instalada, conexión a internet,functional,medium,high,positive
+Registro y Autenticación,Inicio de sesión correcto,"1. Abrir la app.
+2. Ingresar email y contraseña válidos.
+3. Tocar “Iniciar sesión”.",Usuario ya registrado,functional,medium,high,positive
+Búsqueda y Catálogo,Búsqueda y filtrado de platos,"1. Ir a la barra de búsqueda.
+2. Ingresar término (ej. 'silpancho').
+3. Ver resultados.",Usuario autenticado como comensal,functional,medium,high,positive
+Búsqueda y Catálogo,Visualización de detalles de plato,"1. Buscar un plato.
+2. Tocar en el resultado.",Platos ya registrados en la base,functional,medium,high,positive
+Gestión de Restaurante (Dueño),Dueño registra su restaurante,"1. Ir a “Mi Perfil”.
+2. Tocar “Registrar Restaurante”.
+3. Ingresar nombre, dirección, horarios, servicios.
+4. Guardar.",Usuario con rol “dueño” autenticado,functional,high,high,positive
+Gestión de Restaurante (Dueño),Dueño agrega nuevo plato,"1. Ir a “Gestión de Menú”.
+2. Tocar “+ Agregar Plato”.
+3. Subir imagen e ingresar nombre, descripción, precio.
+4. Guardar.",Dueño con restaurante ya registrado,functional,high,high,positive
+Calificaciones y Reseñas,Comensal califica un plato,"1. Ver detalles de un plato.
+2. Tocar “Calificar”.
+3. Asignar 1–5 estrellas y comentario opcional.
+4. Enviar.",Plato visualizado, usuario autenticado,functional,medium,medium,positive
+Geolocalización,Ver restaurantes en mapa interactivo,"1. Ir a “Mapa”.
+2. Permitir acceso a ubicación.",Múltiples restaurantes registrados,functional,medium,high,positive
+Recomendaciones,Visualizar plato destacado del día,"1. Abrir la app como comensal.","Administrador ha configurado el “plato del día”",functional,low,medium,positive
+Gestión de Restaurante (Dueño),Dueño edita información de un plato,"1. Ir a “Gestión de Menú”.
+2. Seleccionar plato.
+3. Editar precio o descripción.
+4. Guardar.",Plato ya registrado,functional,medium,medium,positive
+Disponibilidad,Comensal consulta disponibilidad en tiempo real,"1. Buscar plato.
+2. Ver detalles.",Plato marcado como “no disponible” por dueño,functional,medium,medium,positive
+Moderación (Administrador),Administrador elimina reseña inapropiada,"1. Iniciar sesión como administrador.
+2. Ir a “Moderación”.
+3. Seleccionar reseña ofensiva.
+4. Eliminar.",Reseña con lenguaje ofensivo publicada,functional,high,high,negative
