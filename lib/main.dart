@@ -1,14 +1,24 @@
+import 'package:Sabores_de_mi_Tierra/ui/listaPlatos2/view_model/listaPlatos2.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listaPlatos2/view_model/lista_restaurantes2.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:food_point/ui/auth/view_model/login_screen.dart';
+import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/view_model/registro_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listaRestaurantesUsuario/view_model/lista_restaurantes_usuario_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/perfil_edit_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'firebase_options.dart';
-import 'package:food_point/ui/core/themes/app_theme.dart';
+import 'package:Sabores_de_mi_Tierra/ui/core/themes/app_theme.dart';
+import 'package:Sabores_de_mi_Tierra/ui/auth/view_model/login_screen.dart';
 
-import 'package:food_point/ui/formularioRestaurante/view_model/formularioRestaurante.dart';
-
+// importa las páginas
+//import 'package:Sabores_de_mi_Tierra/ui/home/view_model/home_screen.dart';
 import 'widgets/catalogo_platos.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listar_restaurantes/view_model/listar_restaurantes_screen.dart';
+import 'package:Sabores_de_mi_Tierra/ui/perfil_page/view_model/perfil_screen.dart';
 
-
+// auth
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +28,9 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    await GoogleSignIn.instance.initialize();
     firebaseConnected = true;
   } catch (e) {
-    // If initialization fails we set connected=false and allow the app to run
     firebaseConnected = false;
   }
 
@@ -38,64 +48,67 @@ class MyApp extends StatelessWidget {
       title: 'Platos de mi tierra',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system, // usa el modo del dispositivo
-      //home: RestaurantFormPage(restaurantId: "T21GraUMgRWLmQDj6kma",),
-      //home:RestaurantesPage(),
+      themeMode: ThemeMode.system,
       debugShowCheckedModeBanner: false,
-      home: LoginScreen(firebaseConnected: firebaseConnected),
-      /*home: firebaseConnected
-      ? MyHomePage(title: 'Flutter Demo Home Page', firebaseConnected: firebaseConnected)
-      : const _FirebaseErrorScreen(),*/
-  );
-  }
-}
+      home: firebaseConnected
+          ? const _AuthGate()
+          : const _FirebaseErrorScreen(),
 
-class MyHomePage extends StatefulWidget {
-  final bool firebaseConnected;
-
-  const MyHomePage({super.key, required this.title, required this.firebaseConnected});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          title: Text(widget.title),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Inicio'),
-              Tab(text: 'Mis restaurantes'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            DishCatalogPage(),     // ← Lista mock primero
-            RestaurantFormPage(),
-          ],
-        ),
-      ),
+      routes: {
+        '/login': (context) =>
+            LoginScreen(firebaseConnected: firebaseConnected),
+        '/inicio': (context) => const RestaurantesScreen(),
+        '/registro': (context) => const RegisterScreen(),
+        '/catalogo': (context) => const DishCatalogPage(),
+        '/restaurantes': (context) => const SaboresApp(),
+        '/perfil': (context) => PerfilPage(),
+        '/perfil/edit': (context) => EditProfilePage(),
+        '/perfil/restaurantes': (context) => const MisRestaurantesPage(),
+        '/perfil/restaurantes/create': (context) => const RestaurantFormPage(),
+        '/firebaseError': (context) => const _FirebaseErrorScreen(),
+      },
+      onGenerateRoute: (settings) {
+        // Manejar rutas con parámetros
+        if (settings.name!.startsWith('/perfil/restaurantes/edit/')) {
+          final String id = settings.name!.split('/').last;
+          return MaterialPageRoute(
+            builder: (context) => RestaurantFormPage(restaurantId: id),
+          );
+        }
+        return null;
+      },
     );
   }
 }
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder(
+      stream: AuthService.instance.authStateChanges,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Si quieres respetar login, puedes volver a usar el if (snapshot.hasData)
+        // pero manteniendo la pantalla de restaurantes como inicio:
+        // if (snapshot.hasData) {
+        //   return const RestaurantesScreen();
+        // }
+        // return LoginScreen(firebaseConnected: true);
+
+        // Por ahora, como lo tienes:
+        return const RestaurantesScreen(); // 🔥 Inicio = lista de restaurantes
+      },
+    );
+  }
+}
+
 
 class _FirebaseErrorScreen extends StatelessWidget {
   const _FirebaseErrorScreen();
