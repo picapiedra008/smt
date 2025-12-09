@@ -220,7 +220,7 @@ class RestaurantRepository {
         _isLoading = false;
         return _cachedRestaurantes;
       }
-
+      print('IDs finales después de filtros: $filteredIds');
       // Paso 5: Obtener restaurantes con paginación
       final restaurantes = await _getRestaurantesByIds(
         filteredIds,
@@ -232,7 +232,7 @@ class RestaurantRepository {
         _isLoading = false;
         return _cachedRestaurantes;
       }
-
+      print('Restaurantes obtenidos en esta página: ${restaurantes.map((r) => r.id).toList()}');
       // Actualizar último documento para paginación
       if (restaurantes.isNotEmpty) {
         _lastDocument = await _getLastDocument(restaurantes.last.id);
@@ -287,57 +287,54 @@ class RestaurantRepository {
 
   // Paso 1: Obtener restaurantIds de foods según categoría y hora
   Future<List<String>> _getRestaurantIdsFromFoods(String searchQuery) async {
-    try {
-      // Determinar orden de categorías según hora actual
-      final categoryOrder = _getCategoryOrderByHour();
-      
-      // Construir consulta base - obtenemos todos los foods
-      // Luego filtramos localmente para búsqueda insensible
-      final snapshot = await _db.collection('foods').get();
-      
-      // Filtrar y ordenar localmente
-      final filteredDocs = snapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        
-        // Verificar categoría
-        final category = data['category'] as String? ?? 'cualquiera';
-        if (!categoryOrder.contains(category)) return false;
-        
-        // Verificar búsqueda si hay query
-        if (searchQuery.isNotEmpty) {
-          final name = data['name'] as String? ?? '';
-          return _containsNormalized(name, searchQuery);
-        }
-        
-        return true;
-      }).toList();
+  try {
+    final categoryOrder = _getCategoryOrderByHour();
+    final Set<String> finalIds = {};
 
-      // Ordenar por categoría según la hora
-      filteredDocs.sort((a, b) {
-        final aData = a.data() as Map<String, dynamic>;
-        final bData = b.data() as Map<String, dynamic>;
-        final aCategory = aData['category'] as String? ?? 'cualquiera';
-        final bCategory = bData['category'] as String? ?? 'cualquiera';
-        return categoryOrder.indexOf(aCategory).compareTo(categoryOrder.indexOf(bCategory));
-      });
+    // Obtenemos todos los foods una sola vez
+    final snapshot = await _db.collection('foods').get();
 
-      // Extraer restaurantIds únicos
-      final restaurantIds = <String>{};
-      for (final doc in filteredDocs) {
+    // Normalizar búsqueda
+    final normalizedSearch = _normalizeText(searchQuery);
+
+    for (final category in categoryOrder) {
+      // Lista para acumular IDs de esta categoría
+      final idsForCategory = <String>{};
+
+      for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
+
+        final foodCategory = data['category'] as String? ?? 'cualquiera';
+        final foodName = data['name'] as String? ?? '';
         final restaurantId = data['restaurantId'] as String?;
-        if (restaurantId != null) {
-          restaurantIds.add(restaurantId);
+
+        if (restaurantId == null) continue;
+
+        // Filtrar por categoría exacta
+        if (foodCategory != category) continue;
+
+        // Filtrar por búsqueda (solo si hay query)
+        if (searchQuery.isNotEmpty) {
+          if (!_containsNormalized(foodName, normalizedSearch)) continue;
         }
+
+        idsForCategory.add(restaurantId);
       }
 
-      return restaurantIds.toList();
-
-    } catch (e) {
-      print('Error en _getRestaurantIdsFromFoods: $e');
-      return [];
+      // Agregar al set global para mantener orden por prioridad
+      for (final id in idsForCategory) {
+        finalIds.add(id);
+      }
     }
+
+    return finalIds.toList();
+
+  } catch (e) {
+    print("Error en _getRestaurantIdsFromFoods por partes: $e");
+    return [];
   }
+}
+
 
   // Determinar orden de categorías según hora actual
   List<String> _getCategoryOrderByHour() {
@@ -412,99 +409,100 @@ class RestaurantRepository {
 
   // Paso 3: Combinar y eliminar duplicados
   List<String> _combineAndDeduplicateIds(
-    List<String> restaurantIds,
-    List<String> foodRestaurantIds,
-  ) {
-    final allIds = <String>{};
-    
-    // Primero agregar todos los de restaurants (ya están ordenados por rating)
-    allIds.addAll(restaurantIds);
-    
-    // Luego agregar todos los de foods (que no estén ya incluidos)
-    for (final id in foodRestaurantIds) {
-      if (!allIds.contains(id)) {
-        allIds.add(id);
-      }
+  List<String> primary,
+  List<String> secondary,
+) {
+  final result = <String>[];
+  final seen = <String>{};
+
+  // Primero la lista primaria (mantiene el orden)
+  for (final id in primary) {
+    if (!seen.contains(id)) {
+     // print("primario: $id");
+      seen.add(id);
+      result.add(id);
     }
-    
-    // Mantener el orden: primero los de restaurantIds, luego los nuevos de foods
-    final result = <String>[];
-    result.addAll(restaurantIds);
-    
-    for (final id in foodRestaurantIds) {
-      if (!restaurantIds.contains(id)) {
-        result.add(id);
-      }
-    }
-    
-    return result;
   }
+
+  // Luego la secundaria
+  for (final id in secondary) {
+    if (!seen.contains(id)) {
+      seen.add(id);
+      result.add(id);
+    }
+  }
+  //print('IDs combinados: $result');
+
+  return result;
+}
 
   // Paso 4: Filtrar restaurantes abiertos
-  Future<List<String>> _filterOpenRestaurants(List<String> restaurantIds) async {
-    try {
-      if (restaurantIds.isEmpty) return [];
+Future<List<String>> _filterOpenRestaurants(List<String> restaurantIds) async {
+  try {
+    if (restaurantIds.isEmpty) return [];
 
-      final now = DateTime.now();
-      final diaSemana = now.weekday - 1; // 0=lunes, 6=domingo
-      final horaActual = TimeOfDay.fromDateTime(now);
+    final now = DateTime.now();
+    final diaSemana = now.weekday - 1;
+    final horaActual = TimeOfDay.fromDateTime(now);
 
-      final filteredIds = <String>[];
+    final openIds = <String>{};
 
-      // Obtener documentos en lotes para evitar demasiadas lecturas
-      for (var i = 0; i < restaurantIds.length; i += 10) {
-        final batchIds = restaurantIds.sublist(
-          i,
-          i + 10 > restaurantIds.length ? restaurantIds.length : i + 10,
-        );
+    for (var i = 0; i < restaurantIds.length; i += 10) {
+      final batchIds = restaurantIds.sublist(
+        i,
+        i + 10 > restaurantIds.length ? restaurantIds.length : i + 10,
+      );
 
-        final snapshot = await _db.collection('restaurants')
-            .where(FieldPath.documentId, whereIn: batchIds)
-            .get();
+      final snapshot = await _db.collection('restaurants')
+          .where(FieldPath.documentId, whereIn: batchIds)
+          .get();
 
-        for (final doc in snapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          final openingHours = data['openingHours'] as List?;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final openingHours = data['openingHours'] as List?;
 
-          if (openingHours == null || openingHours.isEmpty) {
-            // Si no tiene horarios, asumir abierto
-            filteredIds.add(doc.id);
-            continue;
-          }
+        if (openingHours == null || openingHours.isEmpty) {
+          openIds.add(doc.id);
+          continue;
+        }
 
-          // Verificar si está abierto ahora
-          bool estaAbierto = false;
-          for (final hourData in openingHours) {
-            final hourMap = hourData as Map<String, dynamic>;
-            final days = List<bool>.from(hourMap['days'] ?? []);
-            final openingTime = hourMap['openingTime'] as String?;
-            final closingTime = hourMap['closingTime'] as String?;
+        bool estaAbierto = false;
 
-            if (days.length > diaSemana && 
-                days[diaSemana] && 
-                openingTime != null && 
-                closingTime != null) {
-              
-              if (_estaEnHorario(horaActual, openingTime, closingTime)) {
-                estaAbierto = true;
-                break;
-              }
+        for (final hourData in openingHours) {
+          final hourMap = hourData as Map<String, dynamic>;
+          final days = List<bool>.from(hourMap['days'] ?? []);
+          final openingTime = hourMap['openingTime'] as String?;
+          final closingTime = hourMap['closingTime'] as String?;
+
+          if (days.length > diaSemana &&
+              days[diaSemana] &&
+              openingTime != null &&
+              closingTime != null) {
+            
+            if (_estaEnHorario(horaActual, openingTime, closingTime)) {
+              estaAbierto = true;
+              break;
             }
           }
+        }
 
-          if (estaAbierto) {
-            filteredIds.add(doc.id);
-          }
+        if (estaAbierto) {
+          openIds.add(doc.id);
         }
       }
-
-      return filteredIds;
-
-    } catch (e) {
-      print('Error en _filterOpenRestaurants: $e');
-      return restaurantIds; // En caso de error, devolver todos
     }
+
+    // 🔥 Reordenar según la lista original
+    final ordered = restaurantIds.where((id) => openIds.contains(id)).toList();
+
+    return ordered;
+
+  } catch (e) {
+    print('Error en _filterOpenRestaurants: $e');
+    return restaurantIds;
   }
+}
+
 
   bool _estaEnHorario(TimeOfDay horaActual, String openingTime, String closingTime) {
     try {
