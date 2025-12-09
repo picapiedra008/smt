@@ -1,11 +1,12 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/dish.dart';
 import '../models/restaurant.dart';
 import '../data/services/dish_service.dart';
-import 'dart:convert';
-
 
 class DishCatalogPage extends StatelessWidget {
   const DishCatalogPage({super.key});
@@ -31,7 +32,6 @@ class DishCatalogPage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-
               Expanded(
                 child: StreamBuilder<List<Dish>>(
                   stream: service.streamDishes(),
@@ -102,9 +102,7 @@ class _DishCard extends StatelessWidget {
                   height: 90,
                 ),
               ),
-
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -123,14 +121,16 @@ class _DishCard extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                        const Icon(Icons.location_on,
+                            size: 16, color: Colors.grey),
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
                             '${dish.restaurantes} restaurantes',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 13),
                           ),
                         ),
                       ],
@@ -139,7 +139,6 @@ class _DishCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-
               ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 92),
                 child: FittedBox(
@@ -150,9 +149,12 @@ class _DishCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: dish.tipo == 'Cena' ? Colors.orange[400] : Colors.amber[600],
+                          color: dish.tipo == 'Cena'
+                              ? Colors.orange[400]
+                              : Colors.amber[600],
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -167,7 +169,8 @@ class _DishCard extends StatelessWidget {
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.star, color: Colors.orange, size: 18),
+                          const Icon(Icons.star,
+                              color: Colors.orange, size: 18),
                           const SizedBox(width: 4),
                           Text(
                             dish.rating.toStringAsFixed(1),
@@ -237,6 +240,7 @@ class DishDetailSheet extends StatelessWidget {
                   dish,
                   height: 180,
                   width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
 
@@ -245,9 +249,12 @@ class DishDetailSheet extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: dish.tipo == 'Cena' ? Colors.orange[400] : Colors.amber[600],
+                      color: dish.tipo == 'Cena'
+                          ? Colors.orange[400]
+                          : Colors.amber[600],
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -266,20 +273,39 @@ class DishDetailSheet extends StatelessWidget {
               ),
               const SizedBox(height: 14),
 
+              /// 👉 Aquí podrías mostrar la descripción si tu modelo la tiene
+              /// por ejemplo `dish.descripcion` o `dish.description`.
+              /// Descomenta y ajusta el nombre del campo:
+              /*
+              if (dish.descripcion != null && dish.descripcion!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    dish.descripcion!,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              */
+
               Row(
                 children: [
                   const Icon(Icons.group_outlined, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
                     'Restaurantes Disponibles (${dish.restaurantes})',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
 
+              // 🔥 AQUÍ SE CARGA LA LISTA DE RESTAURANTES POR NAME
               FutureBuilder<List<Restaurant>>(
-                future: service.fetchRestaurantsForDish(dish.id),
+                future: service.fetchRestaurantsByDishName(dish.nombre),
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
                     return const Padding(
@@ -288,11 +314,15 @@ class DishDetailSheet extends StatelessWidget {
                     );
                   }
                   if (snap.hasError) {
-                    return Text('Error al cargar restaurantes: ${snap.error}');
+                    return Text(
+                      'Error al cargar restaurantes: ${snap.error}',
+                    );
                   }
                   final rs = snap.data ?? [];
                   if (rs.isEmpty) {
-                    return const Text('Aún sin restaurantes vinculados a este plato.');
+                    return const Text(
+                      'Aún no hay restaurantes que ofrezcan este plato.',
+                    );
                   }
                   return Column(
                     children: rs.map((r) => _RestaurantCard(r)).toList(),
@@ -350,14 +380,16 @@ class _RestaurantCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(r.direccion, style: const TextStyle(color: Colors.black54)),
+          Text(r.location, style: const TextStyle(color: Colors.black54)),
           const SizedBox(height: 8),
           Row(
             children: [
               const Icon(Icons.star, color: Colors.orange, size: 18),
               const SizedBox(width: 4),
-              Text(r.rating.toStringAsFixed(1),
-                  style: const TextStyle(color: Colors.black87)),
+              Text(
+                r.rating.toStringAsFixed(1),
+                style: const TextStyle(color: Colors.black87),
+              ),
               const SizedBox(width: 16),
               const Text('•', style: TextStyle(color: Colors.black26)),
               const SizedBox(width: 16),
@@ -373,20 +405,27 @@ class _RestaurantCard extends StatelessWidget {
   }
 }
 
-/// Helper para mostrar imagen desde Base64 o URL
-Widget _buildDishImage(Dish dish,
-    {double? width, double? height, BoxFit fit = BoxFit.cover}) {
+/// --------- Helpers de imagen (Base64 o URL) ---------
+
+Widget _buildDishImage(
+  Dish dish, {
+  double? width,
+  double? height,
+  BoxFit fit = BoxFit.cover,
+}) {
   // 1) Base64 primero
   if (dish.imagenBase64 != null && dish.imagenBase64!.isNotEmpty) {
     try {
+      final bytes = _decodeBase64Image(dish.imagenBase64!);
       return Image.memory(
-        base64Decode(dish.imagenBase64!),
+        bytes,
         width: width,
         height: height,
         fit: fit,
       );
-    } catch (_) {
-      // Si algo falla al decodificar, caemos al fallback
+    } catch (e) {
+      debugPrint('Error decodificando Base64: $e');
+      // sigue abajo a URL / placeholder
     }
   }
 
@@ -398,6 +437,7 @@ Widget _buildDishImage(Dish dish,
       height: height,
       fit: fit,
       errorBuilder: (context, error, stackTrace) {
+        debugPrint('Error cargando imagen por URL: $error');
         return _dishImagePlaceholder(width, height);
       },
     );
@@ -405,6 +445,25 @@ Widget _buildDishImage(Dish dish,
 
   // 3) Si no hay nada, placeholder
   return _dishImagePlaceholder(width, height);
+}
+
+Uint8List _decodeBase64Image(String base64String) {
+  // Si viene como 'data:image/png;base64,AAAA...'
+  if (base64String.contains(',')) {
+    base64String = base64String.split(',').last;
+  }
+
+  // Quitar espacios / saltos
+  base64String = base64String.trim();
+
+  // Ajustar padding si hace falta (longitud múltiplo de 4)
+  final remainder = base64String.length % 4;
+  if (remainder != 0) {
+    base64String =
+        base64String.padRight(base64String.length + (4 - remainder), '=');
+  }
+
+  return base64Decode(base64String);
 }
 
 Widget _dishImagePlaceholder(double? width, double? height) {
