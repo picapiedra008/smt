@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:Sabores_de_mi_Tierra/widgets/calificacion_form.dart';
 import 'package:Sabores_de_mi_Tierra/widgets/calificacion_promedio.dart';
+import 'package:url_launcher/url_launcher.dart'; 
 
 final FirebaseFirestore db = FirebaseFirestore.instance;
 
@@ -20,8 +21,16 @@ class RestaurantUserView extends StatefulWidget {
 }
 
 class _RestaurantUserViewState extends State<RestaurantUserView> {
-  final List<String> _fullDayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-  
+  final List<String> _fullDayNames = [
+    'Lunes',
+    'Martes',
+    'Miércoles',
+    'Jueves',
+    'Viernes',
+    'Sábado',
+    'Domingo'
+  ];
+
   Map<String, dynamic>? _restaurantData;
   List<Map<String, dynamic>> _foods = [];
   bool _isLoading = true;
@@ -41,10 +50,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
 
   Future<void> _loadRestaurantData() async {
     try {
-      DocumentSnapshot restaurantDoc = await db
-          .collection('restaurants')
-          .doc(widget.restaurantId)
-          .get();
+      DocumentSnapshot restaurantDoc =
+          await db.collection('restaurants').doc(widget.restaurantId).get();
 
       if (restaurantDoc.exists) {
         setState(() {
@@ -70,16 +77,17 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
           .get();
 
       List<Map<String, dynamic>> loadedFoods = [];
-      
+
       for (var doc in foodsSnapshot.docs) {
         var foodData = doc.data() as Map<String, dynamic>;
-        
+
         if (foodData['visibility'] != 'oculto') {
           loadedFoods.add({
             'id': doc.id,
             'name': foodData['name'] ?? '',
             'description': foodData['description'] ?? '',
-            'days': List<bool>.from(foodData['days'] ?? List.generate(7, (_) => false)),
+            'days': List<bool>.from(
+                foodData['days'] ?? List.generate(7, (_) => false)),
             'category': foodData['category'] ?? 'cualquiera',
             'imageBase64': foodData['imageBase64'] ?? '',
           });
@@ -94,6 +102,44 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
     }
   }
 
+  // 👇 NUEVO: abrir Google Maps con la location de la BD
+  // 👇 Reemplaza tu método _openInGoogleMaps por este
+Future<void> _openInGoogleMaps() async {
+  final loc = _restaurantData?['location'] as String?;
+  if (loc == null || loc.isEmpty) {
+    print('[MAPS] No hay location en la BD');
+    return;
+  }
+
+  final parts = loc.split(',');
+  if (parts.length < 2) {
+    print('[MAPS] Location inválida: $loc');
+    return;
+  }
+
+  final lat = parts[0].trim();
+  final lng = parts[1].trim();
+
+  final uri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
+  );
+
+  print('[MAPS] Abriendo URL: $uri');
+
+  try {
+    final opened = await launchUrl(
+      uri,
+      mode: LaunchMode.externalApplication, // fuerza app/navegador externo
+    );
+
+    if (!opened) {
+      print('[MAPS] launchUrl devolvió false');
+    }
+  } catch (e) {
+    print('[MAPS] Error al abrir Google Maps: $e');
+  }
+}
+
   List<Map<String, dynamic>> _getFoodsForDay(int dayIndex) {
     return _foods.where((food) {
       final days = food['days'] as List<bool>;
@@ -102,12 +148,14 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
   }
 
   String _getOpeningHoursForDay(int dayIndex) {
-    if (_restaurantData == null || _restaurantData!['openingHours'] == null) {
+    if (_restaurantData == null ||
+        _restaurantData!['openingHours'] == null) {
       return 'Horario no disponible';
     }
 
-    final openingHours = List<Map<String, dynamic>>.from(_restaurantData!['openingHours']);
-    
+    final openingHours =
+        List<Map<String, dynamic>>.from(_restaurantData!['openingHours']);
+
     for (var hour in openingHours) {
       final days = List<bool>.from(hour['days'] ?? []);
       if (days[dayIndex]) {
@@ -116,7 +164,7 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
         return '$openingTime - $closingTime';
       }
     }
-    
+
     return 'Cerrado';
   }
 
@@ -156,7 +204,9 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                 children: [
                   Icon(
                     isOpen ? Icons.check_circle : Icons.cancel,
-                    color: isToday ? Colors.white : (isOpen ? Colors.green : Colors.red),
+                    color: isToday
+                        ? Colors.white
+                        : (isOpen ? Colors.green : Colors.red),
                     size: 20,
                   ),
                   const SizedBox(width: 8),
@@ -174,7 +224,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                     openingHours,
                     style: TextStyle(
                       fontSize: 14,
-                      color: isToday ? Colors.white : Colors.grey[600],
+                      color:
+                          isToday ? Colors.white : Colors.grey[600],
                     ),
                   ),
                 ],
@@ -189,7 +240,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.fastfood, size: 48, color: Colors.grey[400]),
+                          Icon(Icons.fastfood,
+                              size: 48, color: Colors.grey[400]),
                           const SizedBox(height: 12),
                           Text(
                             'No hay platos disponibles',
@@ -232,22 +284,22 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                 borderRadius: BorderRadius.circular(8),
                 color: Colors.grey[200],
               ),
-              child: food['imageBase64'] != null && food['imageBase64'].isNotEmpty
+              child: food['imageBase64'] != null &&
+                      food['imageBase64'].isNotEmpty
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(8),
                       child: Image.memory(
                         _decodeBase64(food['imageBase64']),
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) {
-                          return const Icon(Icons.fastfood, color: Colors.grey);
+                          return const Icon(Icons.fastfood,
+                              color: Colors.grey);
                         },
                       ),
                     )
                   : const Icon(Icons.fastfood, color: Colors.grey),
             ),
-            
             const SizedBox(width: 12),
-            
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +312,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                     ),
                   ),
                   const SizedBox(height: 4),
-                  if (food['description'] != null && food['description'].isNotEmpty)
+                  if (food['description'] != null &&
+                      food['description'].isNotEmpty)
                     Text(
                       food['description'],
                       style: TextStyle(
@@ -272,7 +325,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                     ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: _getCategoryColor(food['category']),
                       borderRadius: BorderRadius.circular(12),
@@ -421,7 +475,7 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header con logo, nombre, estado y descripción
+            // Header con logo, nombre, estado, descripción, ubicación y botón de Maps
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -429,7 +483,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
               child: Column(
                 children: [
                   // Logo
-                  if (_restaurantData!['logoBase64'] != null && _restaurantData!['logoBase64'].isNotEmpty)
+                  if (_restaurantData!['logoBase64'] != null &&
+                      _restaurantData!['logoBase64'].isNotEmpty)
                     Container(
                       width: 150,
                       height: 150,
@@ -465,11 +520,14 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                           ),
                         ],
                       ),
-                      child: const Icon(Icons.restaurant, color: Colors.grey, size: 60),
+                      child: const Icon(
+                        Icons.restaurant,
+                        color: Colors.grey,
+                        size: 60,
+                      ),
                     ),
-                  
                   const SizedBox(height: 20),
-                  
+
                   // Nombre del restaurante
                   Text(
                     _restaurantData!['name'] ?? 'Sin nombre',
@@ -479,12 +537,13 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  
+
                   const SizedBox(height: 12),
-                  
+
                   // Estado actual (Abierto/Cerrado)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 10),
                     decoration: BoxDecoration(
                       color: isCurrentlyOpen ? Colors.green[50] : Colors.red[50],
                       borderRadius: BorderRadius.circular(25),
@@ -513,9 +572,9 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Descripción
                   Text(
                     _restaurantData!['description'] ?? 'Sin descripción',
@@ -525,6 +584,55 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+
+                  const SizedBox(height: 8),
+
+                  // Location
+                  if (_restaurantData!['location'] != null &&
+                      (_restaurantData!['location'] as String).isNotEmpty)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.location_on,
+                          size: 18,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _restaurantData!['location'],
+                            style: TextStyle(
+                              color: Colors.grey[700],
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                  const SizedBox(height: 8),
+
+                  // Botón Google Maps
+                  if (_restaurantData!['location'] != null &&
+                      (_restaurantData!['location'] as String).isNotEmpty)
+                    ElevatedButton.icon(
+                      onPressed: _openInGoogleMaps,
+                      icon: const Icon(Icons.map),
+                      label: const Text('Ver en Google Maps'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -540,9 +648,8 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
                 ),
               ),
             ),
-            
             SizedBox(
-              height: 400, // Altura fija para el scroll horizontal
+              height: 400,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: 7,
