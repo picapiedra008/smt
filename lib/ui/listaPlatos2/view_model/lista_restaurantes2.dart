@@ -152,17 +152,7 @@ class _RestaurantesScreenState extends State<RestaurantesScreen> {
         title: const Text("Sabores de mi Tierra"),
         centerTitle: true,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const RestaurantFormPage(),
-                ),
-              );
-            },
-          ),
+          
         ],
       ),
       bottomNavigationBar: const CustomBottomNav(selectedIndex: 0),

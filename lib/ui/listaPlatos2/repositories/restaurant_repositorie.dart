@@ -195,10 +195,20 @@ class RestaurantRepository {
       final restaurantIdsFromSearch = await _getRestaurantIdsFromSearch(searchQuery);
       
       // Paso 3: Combinar y eliminar duplicados
-      final combinedIds = _combineAndDeduplicateIds(
+      var combinedIds;
+
+      if(searchQuery.isEmpty){
+        combinedIds = _combineAndDeduplicateIds(
+        restaurantIdsFromFoods,
+        restaurantIdsFromSearch,
+      );
+      }else{
+        combinedIds = _combineAndDeduplicateIds(
         restaurantIdsFromSearch,
         restaurantIdsFromFoods,
       );
+      }
+      
 
       // Paso 4: Aplicar filtro de solo abiertos
       final filteredIds = soloAbiertos 
