@@ -4,7 +4,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:Sabores_de_mi_Tierra/widgets/calificacion_form.dart';
 import 'package:Sabores_de_mi_Tierra/widgets/calificacion_promedio.dart';
-import 'package:url_launcher/url_launcher.dart'; 
+import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart'; // 👈 NUEVO
 
 final FirebaseFirestore db = FirebaseFirestore.instance;
 
@@ -36,6 +37,9 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
   bool _isLoading = true;
   int _currentDayIndex = 0;
 
+  // distancia en km 
+  double? _distanceKm;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,7 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
         });
 
         await _loadRestaurantFoods();
+        await _calculateDistance(); 
       }
     } catch (e) {
       print('Error al cargar datos del restaurante: $e');
@@ -102,43 +107,108 @@ class _RestaurantUserViewState extends State<RestaurantUserView> {
     }
   }
 
-  // 👇 NUEVO: abrir Google Maps con la location de la BD
-  // 👇 Reemplaza tu método _openInGoogleMaps por este
-Future<void> _openInGoogleMaps() async {
-  final loc = _restaurantData?['location'] as String?;
-  if (loc == null || loc.isEmpty) {
-    print('[MAPS] No hay location en la BD');
-    return;
+
+  Future<void> _calculateDistance() async {
+    try {
+      final locStr = _restaurantData?['location'] as String?;
+      if (locStr == null || locStr.isEmpty) {
+        print('[DISTANCIA] No hay location en la BD');
+        return;
+      }
+
+      final parts = locStr.split(',');
+      if (parts.length < 2) {
+        print('[DISTANCIA] Location inválida: $locStr');
+        return;
+      }
+
+      final lat = double.tryParse(parts[0].trim());
+      final lng = double.tryParse(parts[1].trim());
+      if (lat == null || lng == null) {
+        print('[DISTANCIA] No se pudo parsear lat/lng');
+        return;
+      }
+
+      
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        print('[DISTANCIA] Servicios de ubicación desactivados');
+        return;
+      }
+
+      // Permisos
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          print('[DISTANCIA] Permiso de ubicación denegado');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        print('[DISTANCIA] Permiso de ubicación denegado permanentemente');
+        return;
+      }
+
+      // Posición actual 
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      final meters = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        lat,
+        lng,
+      );
+
+      setState(() {
+        _distanceKm = meters / 1000.0;
+      });
+
+      print('[DISTANCIA] Distancia calculada: $_distanceKm km');
+    } catch (e) {
+      print('[DISTANCIA] Error calculando distancia: $e');
+    }
   }
 
-  final parts = loc.split(',');
-  if (parts.length < 2) {
-    print('[MAPS] Location inválida: $loc');
-    return;
-  }
+  // Google Maps
+  Future<void> _openInGoogleMaps() async {
+    final loc = _restaurantData?['location'] as String?;
+    if (loc == null || loc.isEmpty) {
+      print('[MAPS] No hay location en la BD');
+      return;
+    }
 
-  final lat = parts[0].trim();
-  final lng = parts[1].trim();
+    final parts = loc.split(',');
+    if (parts.length < 2) {
+      print('[MAPS] Location inválida: $loc');
+      return;
+    }
 
-  final uri = Uri.parse(
-    'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
-  );
+    final lat = parts[0].trim();
+    final lng = parts[1].trim();
 
-  print('[MAPS] Abriendo URL: $uri');
-
-  try {
-    final opened = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication, // fuerza app/navegador externo
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$lat,$lng',
     );
 
-    if (!opened) {
-      print('[MAPS] launchUrl devolvió false');
+    print('[MAPS] Abriendo URL: $uri');
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened) {
+        print('[MAPS] launchUrl devolvió false');
+      }
+    } catch (e) {
+      print('[MAPS] Error al abrir Google Maps: $e');
     }
-  } catch (e) {
-    print('[MAPS] Error al abrir Google Maps: $e');
   }
-}
 
   List<Map<String, dynamic>> _getFoodsForDay(int dayIndex) {
     return _foods.where((food) {
@@ -224,8 +294,7 @@ Future<void> _openInGoogleMaps() async {
                     openingHours,
                     style: TextStyle(
                       fontSize: 14,
-                      color:
-                          isToday ? Colors.white : Colors.grey[600],
+                      color: isToday ? Colors.white : Colors.grey[600],
                     ),
                   ),
                 ],
@@ -475,7 +544,7 @@ Future<void> _openInGoogleMaps() async {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header con logo, nombre, estado, descripción, ubicación y botón de Maps
+            // Header con logo, nombre, estado, descripción, distancia y botón Maps
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -587,27 +656,24 @@ Future<void> _openInGoogleMaps() async {
 
                   const SizedBox(height: 8),
 
-                  // Location
-                  if (_restaurantData!['location'] != null &&
-                      (_restaurantData!['location'] as String).isNotEmpty)
+                  // Distancia 
+                  if (_distanceKm != null)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const Icon(
-                          Icons.location_on,
+                          Icons.directions_walk,
                           size: 18,
-                          color: Colors.red,
+                          color: Colors.blueGrey,
                         ),
                         const SizedBox(width: 4),
-                        Flexible(
-                          child: Text(
-                            _restaurantData!['location'],
-                            style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 14,
-                            ),
-                            textAlign: TextAlign.center,
+                        Text(
+                          'A ${_distanceKm!.toStringAsFixed(2)} km de tu ubicación',
+                          style: TextStyle(
+                            color: Colors.grey[700],
+                            fontSize: 14,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ],
                     ),
