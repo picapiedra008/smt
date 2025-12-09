@@ -491,8 +491,6 @@ Future<List<String>> _filterOpenRestaurants(List<String> restaurantIds) async {
         }
       }
     }
-
-    // 🔥 Reordenar según la lista original
     final ordered = restaurantIds.where((id) => openIds.contains(id)).toList();
 
     return ordered;
