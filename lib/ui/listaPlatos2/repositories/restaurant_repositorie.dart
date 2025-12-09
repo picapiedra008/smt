@@ -338,7 +338,7 @@ class RestaurantRepository {
 
     // 4:00 a 11:30
     if (totalMinutes >= 4 * 60 && totalMinutes <= 11 * 60 + 30) {
-      return ['cena', 'cualquiera', 'almuerzo', 'desayuno'];
+      return [ 'desayuno',  'cualquiera', 'almuerzo', 'cena'];
     }
     // 11:31 a 15:00
     else if (totalMinutes >= 11 * 60 + 31 && totalMinutes <= 15 * 60) {
@@ -350,7 +350,7 @@ class RestaurantRepository {
     }
     // 00:00 a 3:59
     else {
-      return ['cualquiera', 'cena', 'almuerzo', 'desayuno'];
+      return ['cualquiera', 'cena', 'desayuno' ,  'almuerzo'];
     }
   }
 
