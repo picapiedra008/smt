@@ -1,4 +1,5 @@
 import 'package:Sabores_de_mi_Tierra/ui/listaPlatos2/view_model/listaPlatos2.dart';
+import 'package:Sabores_de_mi_Tierra/ui/listaPlatos2/view_model/lista_restaurantes2.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:Sabores_de_mi_Tierra/data/services/auth_service.dart';
@@ -56,7 +57,7 @@ class MyApp extends StatelessWidget {
       routes: {
         '/login': (context) =>
             LoginScreen(firebaseConnected: firebaseConnected),
-        '/inicio': (context) => const PlatosAgrupadosScreen(),
+        '/inicio': (context) => const RestaurantesScreen(),
         '/registro': (context) => const RegisterScreen(),
         '/catalogo': (context) => const DishCatalogPage(),
         '/restaurantes': (context) => const SaboresApp(),
@@ -94,15 +95,20 @@ class _AuthGate extends StatelessWidget {
           );
         }
 
-        //if (snapshot.hasData) {
-        return const PlatosAgrupadosScreen(); // 🔥 Sesión activa → ir al inicio
-        //}
+        // Si quieres respetar login, puedes volver a usar el if (snapshot.hasData)
+        // pero manteniendo la pantalla de restaurantes como inicio:
+        // if (snapshot.hasData) {
+        //   return const RestaurantesScreen();
+        // }
+        // return LoginScreen(firebaseConnected: true);
 
-        //return LoginScreen(firebaseConnected: true); // 🔥 No logueado → login
+        // Por ahora, como lo tienes:
+        return const RestaurantesScreen(); // 🔥 Inicio = lista de restaurantes
       },
     );
   }
 }
+
 
 class _FirebaseErrorScreen extends StatelessWidget {
   const _FirebaseErrorScreen();

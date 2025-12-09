@@ -4,10 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CalificacionForm extends StatefulWidget {
   final String restaurantId;
+  final VoidCallback? onRatingSubmitted; // Callback para notificar cambios
 
   const CalificacionForm({
     super.key,
     required this.restaurantId,
+    this.onRatingSubmitted,
   });
 
   @override
@@ -75,9 +77,19 @@ class _CalificacionFormState extends State<CalificacionForm> {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-         
+          Icon(
+            Icons.check_circle,
+            color: Colors.green,
+            size: 16,
+          ),
           const SizedBox(width: 4),
-         
+          Text(
+            '¡Calificado!',
+            style: TextStyle(
+              color: Colors.green,
+              fontSize: 14,
+            ),
+          ),
         ],
       );
     }
@@ -94,7 +106,6 @@ class _CalificacionFormState extends State<CalificacionForm> {
   Future<void> _handleRating(int rating) async {
     final user = AuthService.instance.currentUser;
     
-    // Verificar si el usuario está autenticado
     if (user == null) {
       _showLoginRequiredDialog();
       return;
@@ -114,6 +125,10 @@ class _CalificacionFormState extends State<CalificacionForm> {
       });
 
       _showSuccessMessage();
+      
+      // Notificar que se completó una calificación
+      widget.onRatingSubmitted?.call();
+      
     } catch (e) {
       setState(() {
         _isSubmitting = false;
@@ -123,66 +138,190 @@ class _CalificacionFormState extends State<CalificacionForm> {
   }
 
   Future<void> _submitRating(String userId, int rating) async {
-    // Verificar si ya existe una calificación del usuario para este restaurante
-    final existingRating = await _db
-        .collection('ratings')
-        .where('restaurantId', isEqualTo: widget.restaurantId)
-        .where('userId', isEqualTo: userId)
-        .get();
-
-    if (existingRating.docs.isNotEmpty) {
-      // Actualizar calificación existente
-      await _db
+    try {
+      // 1. Primero, obtener la calificación existente del usuario
+      final ratingsQuery = await _db
           .collection('ratings')
-          .doc(existingRating.docs.first.id)
-          .update({
-        'rate': rating,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } else {
-      // Crear nueva calificación
-      await _db.collection('ratings').add({
-        'restaurantId': widget.restaurantId,
-        'userId': userId,
-        'rate': rating,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    }
+          .where('restaurantId', isEqualTo: widget.restaurantId)
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
 
-    // Actualizar la calificación promedio en el restaurante
-    await _updateRestaurantAverageRating();
+      String ratingId;
+      final bool isNewRating = ratingsQuery.docs.isEmpty;
+      final int? previousRating;
+
+      if (isNewRating) {
+        ratingId = _db.collection('ratings').doc().id;
+        previousRating = null;
+      } else {
+        ratingId = ratingsQuery.docs.first.id;
+        final data = ratingsQuery.docs.first.data() as Map<String, dynamic>;
+        previousRating = data['rate'] as int?;
+      }
+
+      // 2. Actualizar/crear la calificación del usuario
+      final batch = _db.batch();
+      
+      final ratingRef = _db.collection('ratings').doc(ratingId);
+      
+      if (isNewRating) {
+        batch.set(ratingRef, {
+          'restaurantId': widget.restaurantId,
+          'userId': userId,
+          'rate': rating,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        batch.update(ratingRef, {
+          'rate': rating,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // 3. Obtener todas las calificaciones para calcular el nuevo promedio
+      final allRatings = await _db
+          .collection('ratings')
+          .where('restaurantId', isEqualTo: widget.restaurantId)
+          .get();
+
+      if (allRatings.docs.isEmpty) {
+        // No debería pasar si acabamos de crear una
+        batch.update(
+          _db.collection('restaurants').doc(widget.restaurantId),
+          {
+            'average_rate': 0.0,
+            'total_ratings': 0,
+            'last_updated': FieldValue.serverTimestamp(),
+          },
+        );
+      } else {
+        // Calcular el nuevo promedio
+        double total = 0;
+        int count = 0;
+        
+        for (var doc in allRatings.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (doc.id == ratingId) {
+            // Usar la nueva calificación
+            total += rating.toDouble();
+          } else {
+            total += (data['rate'] as int).toDouble();
+          }
+          count++;
+        }
+
+        // Ajustar si estamos actualizando una calificación existente
+        if (previousRating != null && !isNewRating) {
+          // Remover la calificación anterior del total si existe
+          // Esto ya está cubierto porque estamos reemplazando en el loop
+        }
+
+        final average = total / count;
+        final roundedAverage = double.parse(average.toStringAsFixed(1));
+
+        // Actualizar el restaurante
+        batch.update(
+          _db.collection('restaurants').doc(widget.restaurantId),
+          {
+            'average_rate': roundedAverage,
+            'total_ratings': count,
+            'last_updated': FieldValue.serverTimestamp(),
+          },
+        );
+      }
+
+      // 4. Ejecutar el batch
+      await batch.commit();
+
+      // 5. Forzar una actualización inmediata (opcional)
+      await _db.collection('restaurants')
+          .doc(widget.restaurantId)
+          .update({'force_refresh': FieldValue.serverTimestamp()});
+
+    } catch (e) {
+      print('Error en _submitRating: $e');
+      rethrow;
+    }
   }
 
-  Future<void> _updateRestaurantAverageRating() async {
+  // Versión alternativa más simple sin transacción compleja
+  Future<void> _submitRatingSimple(String userId, int rating) async {
     try {
-      // Obtener todas las calificaciones del restaurante
+      // 1. Guardar la calificación del usuario
+      final ratingsQuery = await _db
+          .collection('ratings')
+          .where('restaurantId', isEqualTo: widget.restaurantId)
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (ratingsQuery.docs.isEmpty) {
+        await _db.collection('ratings').add({
+          'restaurantId': widget.restaurantId,
+          'userId': userId,
+          'rate': rating,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      } else {
+        await _db.collection('ratings')
+            .doc(ratingsQuery.docs.first.id)
+            .update({
+          'rate': rating,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // 2. Calcular y actualizar el promedio
+      await _updateAverageRating();
+
+    } catch (e) {
+      print('Error en _submitRatingSimple: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _updateAverageRating() async {
+    try {
+      // Obtener todas las calificaciones
       final ratingsSnapshot = await _db
           .collection('ratings')
           .where('restaurantId', isEqualTo: widget.restaurantId)
           .get();
 
-      if (ratingsSnapshot.docs.isNotEmpty) {
-        double total = 0;
-        for (var doc in ratingsSnapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
-          total += (data['rate'] as int).toDouble();
-        }
-        
-        final averageRating = total / ratingsSnapshot.docs.length;
-        
-        // Actualizar el restaurante con el promedio
-        await _db
-            .collection('restaurants')
+      if (ratingsSnapshot.docs.isEmpty) {
+        await _db.collection('restaurants')
             .doc(widget.restaurantId)
             .update({
-          'calificacion': double.parse(averageRating.toStringAsFixed(1)),
-          'totalRatings': ratingsSnapshot.docs.length,
+          'average_rate': 0.0,
+          'total_ratings': 0,
         });
+        return;
       }
+
+      // Calcular promedio
+      double total = 0;
+      for (var doc in ratingsSnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        total += (data['rate'] as int).toDouble();
+      }
+      
+      final average = total / ratingsSnapshot.docs.length;
+      final roundedAverage = double.parse(average.toStringAsFixed(1));
+
+      // Actualizar restaurante
+      await _db.collection('restaurants')
+          .doc(widget.restaurantId)
+          .update({
+        'average_rate': roundedAverage,
+        'total_ratings': ratingsSnapshot.docs.length,
+      });
+
     } catch (e) {
-      print('Error al actualizar calificación promedio: $e');
-      // No mostramos error al usuario ya que la calificación individual sí se guardó
+      print('Error en _updateAverageRating: $e');
+      // No rethrow - queremos que la calificación individual se guarde
     }
   }
 
@@ -242,7 +381,6 @@ class _CalificacionFormState extends State<CalificacionForm> {
     );
   }
 
-  // Método opcional para cargar calificación existente del usuario
   Future<void> loadUserRating() async {
     final user = AuthService.instance.currentUser;
     if (user != null) {
@@ -269,7 +407,6 @@ class _CalificacionFormState extends State<CalificacionForm> {
   @override
   void initState() {
     super.initState();
-    // Cargar calificación existente cuando el widget se inicializa
     WidgetsBinding.instance.addPostFrameCallback((_) {
       loadUserRating();
     });
